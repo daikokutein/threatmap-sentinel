@@ -66,7 +66,10 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   const [threatData, setThreatData] = useState<ThreatData[]>([]);
   const [blockchainData, setBlockchainData] = useState<BlockchainData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const intervalRef = useRef<number | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
   
   const fetchThreatData = useCallback(async () => {
     if (!apiUrl) return;
@@ -92,11 +95,22 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       }));
       
       setThreatData(enrichedData);
+      setLastUpdated(new Date());
+      
+      // Reset reconnect attempts on successful fetch
+      if (reconnectAttempts > 0) {
+        setReconnectAttempts(0);
+        toast.success('Reconnected to data sources');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch threat data');
-      toast.error('Failed to fetch threat data');
+      
+      if (isConnected) {
+        toast.error('Connection to threat API lost. Attempting to reconnect...');
+        scheduleReconnect();
+      }
     }
-  }, [apiUrl, apiKey]);
+  }, [apiUrl, apiKey, isConnected, reconnectAttempts]);
   
   const fetchBlockchainData = useCallback(async () => {
     if (!blockchainUrl) return;
@@ -110,11 +124,32 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       
       const data: BlockchainData = await response.json();
       setBlockchainData(data);
+      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch blockchain data');
-      toast.error('Failed to fetch blockchain data');
+      
+      if (isConnected) {
+        toast.error('Connection to blockchain lost. Attempting to reconnect...');
+        scheduleReconnect();
+      }
     }
-  }, [blockchainUrl]);
+  }, [blockchainUrl, isConnected]);
+  
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      window.clearTimeout(reconnectTimeoutRef.current);
+    }
+    
+    // Exponential backoff for reconnect attempts (1s, 2s, 4s, 8s, etc., max 30s)
+    const delay = Math.min(Math.pow(2, reconnectAttempts) * 1000, 30000);
+    
+    reconnectTimeoutRef.current = window.setTimeout(() => {
+      setReconnectAttempts(prev => prev + 1);
+      fetchThreatData();
+      fetchBlockchainData();
+    }, delay);
+    
+  }, [reconnectAttempts, fetchThreatData, fetchBlockchainData]);
   
   const disconnect = useCallback(() => {
     if (intervalRef.current) {
@@ -122,7 +157,13 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       intervalRef.current = null;
     }
     
+    if (reconnectTimeoutRef.current) {
+      window.clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    
     setIsConnected(false);
+    setReconnectAttempts(0);
     toast.info('Disconnected from data sources');
   }, []);
   
@@ -130,10 +171,15 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     setIsLoading(true);
     setError(null);
     
-    // Clear any existing interval
+    // Clear any existing interval and timeout
     if (intervalRef.current) {
       window.clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    
+    if (reconnectTimeoutRef.current) {
+      window.clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
     
     try {
@@ -143,16 +189,18 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       ]);
       
       setIsConnected(true);
+      setReconnectAttempts(0);
       toast.success('Successfully connected to data sources');
       
-      // Set up polling every 15 seconds
+      // Set up polling every 10 seconds
       intervalRef.current = window.setInterval(() => {
         fetchThreatData();
         fetchBlockchainData();
-      }, 15000);
+      }, 10000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed');
       setIsConnected(false);
+      toast.error('Failed to connect to data sources');
     } finally {
       setIsLoading(false);
     }
@@ -163,6 +211,10 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     return () => {
       if (intervalRef.current) {
         window.clearInterval(intervalRef.current);
+      }
+      
+      if (reconnectTimeoutRef.current) {
+        window.clearTimeout(reconnectTimeoutRef.current);
       }
     };
   }, []);
@@ -181,9 +233,11 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     isConnected,
     isLoading,
     error,
+    lastUpdated,
     threatData,
     blockchainData,
     threatStats,
+    reconnectAttempts,
     connectToSources,
     disconnect
   };
