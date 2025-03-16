@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, CheckCircle, Activity, Zap } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 
 interface ThreatStatsProps {
   total: number;
@@ -19,23 +18,15 @@ const StatCard = ({
   value, 
   icon: Icon, 
   iconColor, 
-  delay,
-  animate = true,
-  badgeText = '',
-  badgeColor = ''
+  delay 
 }: { 
   title: string; 
   value: number; 
   icon: any; 
   iconColor: string; 
-  delay: number;
-  animate?: boolean;
-  badgeText?: string;
-  badgeColor?: string;
+  delay: number; 
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [previousValue, setPreviousValue] = useState(value);
-  const [isIncreasing, setIsIncreasing] = useState(false);
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -45,64 +36,31 @@ const StatCard = ({
     return () => clearTimeout(timer);
   }, [delay]);
   
-  useEffect(() => {
-    if (value !== previousValue) {
-      setIsIncreasing(value > previousValue);
-      setPreviousValue(value);
-    }
-  }, [value, previousValue]);
-  
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
-      transition={{ duration: 0.5, delay: delay / 1000 }}
-      className="w-full"
-    >
-      <Card className="stat-card overflow-hidden h-full">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl md:text-3xl font-semibold tracking-tight">{value}</p>
-                {isIncreasing && animate && (
-                  <span className="text-green-500 text-sm animate-pulse">
-                    <Zap size={14} />
-                  </span>
-                )}
-                {badgeText && (
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${badgeColor}`}>
-                    {badgeText}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className={`p-3 rounded-full bg-${iconColor}/10`}>
-              <Icon className={`h-5 w-5 text-${iconColor}`} />
-            </div>
+    <Card className={cn(
+      "overflow-hidden transition-all duration-500 transform",
+      isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+    )}>
+      <CardContent className="p-4 md:p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
+            <p className="text-2xl md:text-3xl font-semibold tracking-tight">{value}</p>
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+          <div className={`p-3 rounded-full bg-${iconColor}/10`}>
+            <Icon className={`h-5 w-5 text-${iconColor}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
-const BarIndicator = ({ 
-  percentage, 
-  color, 
-  animated = true 
-}: { 
-  percentage: number; 
-  color: string;
-  animated?: boolean;
-}) => (
+const BarIndicator = ({ percentage, color }: { percentage: number; color: string }) => (
   <div className="relative h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-    <motion.div
-      className={`absolute left-0 top-0 h-full bg-${color}`}
-      initial={{ width: animated ? 0 : `${percentage}%` }}
-      animate={{ width: `${percentage}%` }}
-      transition={{ duration: 1, ease: "easeOut" }}
+    <div
+      className={`absolute left-0 top-0 h-full bg-${color} transition-all duration-1000 ease-out`}
+      style={{ width: `${percentage}%` }}
     />
   </div>
 );
@@ -127,10 +85,7 @@ const ThreatStats = ({ total, high, medium, low, mitigated, active }: ThreatStat
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium mb-4 flex items-center">
-          <Activity className="h-4 w-4 mr-2 text-primary" />
-          Threat Overview
-        </h2>
+        <h2 className="text-lg font-medium mb-4">Threat Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard 
             title="Total Threats" 
@@ -145,8 +100,6 @@ const ThreatStats = ({ total, high, medium, low, mitigated, active }: ThreatStat
             icon={AlertTriangle} 
             iconColor="severity-high" 
             delay={200} 
-            badgeText={active > 0 ? "LIVE" : ""}
-            badgeColor={active > 0 ? "bg-red-500/10 text-red-500" : ""}
           />
           <StatCard 
             title="Mitigated" 
@@ -158,89 +111,37 @@ const ThreatStats = ({ total, high, medium, low, mitigated, active }: ThreatStat
         </div>
       </div>
       
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="glass-card p-5 rounded-lg"
-      >
-        <h3 className="text-sm font-medium mb-4 flex items-center">
-          <Zap className="h-4 w-4 mr-2 text-primary" />
-          Severity Distribution
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center">
-                <span className="w-2 h-2 rounded-full bg-severity-high mr-2" />
-                <span className="text-sm">High Severity</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium">{high}</span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({highPercentage.toFixed(1)}%)
-                </span>
-              </div>
+      <div className="glass-card p-4 rounded-lg animate-fade-in">
+        <h3 className="text-sm font-medium mb-4">Severity Distribution</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-severity-high mr-2" />
+              <span className="text-sm">High</span>
             </div>
-            <BarIndicator 
-              percentage={showPercentage ? highPercentage : 0} 
-              color="severity-high" 
-              animated={showPercentage} 
-            />
+            <span className="text-sm">{high}</span>
           </div>
+          <BarIndicator percentage={showPercentage ? highPercentage : 0} color="severity-high" />
           
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center">
-                <span className="w-2 h-2 rounded-full bg-severity-medium mr-2" />
-                <span className="text-sm">Medium Severity</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium">{medium}</span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({mediumPercentage.toFixed(1)}%)
-                </span>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-severity-medium mr-2" />
+              <span className="text-sm">Medium</span>
             </div>
-            <BarIndicator 
-              percentage={showPercentage ? mediumPercentage : 0} 
-              color="severity-medium" 
-              animated={showPercentage} 
-            />
+            <span className="text-sm">{medium}</span>
           </div>
+          <BarIndicator percentage={showPercentage ? mediumPercentage : 0} color="severity-medium" />
           
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center">
-                <span className="w-2 h-2 rounded-full bg-severity-low mr-2" />
-                <span className="text-sm">Low Severity</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium">{low}</span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({lowPercentage.toFixed(1)}%)
-                </span>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-severity-low mr-2" />
+              <span className="text-sm">Low</span>
             </div>
-            <BarIndicator 
-              percentage={showPercentage ? lowPercentage : 0} 
-              color="severity-low" 
-              animated={showPercentage} 
-            />
+            <span className="text-sm">{low}</span>
           </div>
+          <BarIndicator percentage={showPercentage ? lowPercentage : 0} color="severity-low" />
         </div>
-        
-        {total > 0 && (
-          <div className="mt-4 pt-3 border-t border-border">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Mitigation Rate:</span>
-              <span className="font-medium">
-                {total > 0 ? ((mitigated / total) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-          </div>
-        )}
-      </motion.div>
+      </div>
     </div>
   );
 };
