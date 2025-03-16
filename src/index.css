@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -33,6 +34,10 @@
     --ring: 221 83% 53%;
 
     --radius: 0.75rem;
+    
+    --severity-high: #FF3B30;
+    --severity-medium: #FF9500;
+    --severity-low: #34C759;
   }
 
   .dark {
@@ -63,6 +68,10 @@
     --border: 217 33% 20%;
     --input: 217 33% 20%;
     --ring: 224 76% 60%;
+    
+    --severity-high: #FF453A;
+    --severity-medium: #FF9F0A;
+    --severity-low: #30D158;
   }
 }
 
@@ -121,33 +130,23 @@
   }
   
   .threat-indicator-high:before {
-    @apply bg-severity-high;
+    @apply bg-red-500;
   }
   
   .threat-indicator-medium:before {
-    @apply bg-severity-medium;
+    @apply bg-orange-500;
   }
   
   .threat-indicator-low:before {
-    @apply bg-severity-low;
+    @apply bg-green-500;
   }
   
   .map-container {
-    height: 100%;
-    width: 100%;
-    position: relative;
-    border-radius: 0.75rem;
-    overflow: hidden;
+    @apply h-full w-full relative rounded-md overflow-hidden;
   }
   
   .map-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(255,255,255,0.9), transparent);
-    height: 100px;
-    pointer-events: none;
+    @apply absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent h-24 pointer-events-none;
   }
 
   .connect-button {
@@ -170,16 +169,23 @@
   }
   
   .blockchain-block {
-    @apply relative p-4 m-2 glass-card rounded-md animate-slide-up;
-    animation-delay: calc(var(--index) * 100ms);
+    @apply relative p-4 glass-card rounded-md;
   }
   
-  .blockchain-arrow {
-    @apply absolute left-1/2 -translate-x-1/2 -bottom-6 w-3 h-6 border-l-2 border-b-2 border-primary/30;
+  .blockchain-connection {
+    @apply absolute left-1/2 -translate-x-1/2 -bottom-6 w-1 h-6;
+    background: linear-gradient(to bottom, var(--primary), transparent);
+  }
+
+  .blockchain-container::after {
+    content: '';
+    @apply absolute left-1/2 -translate-x-1/2 top-4 bottom-0 w-0.5 -z-10;
+    background: linear-gradient(to bottom, var(--primary), transparent);
   }
 
   .alert-banner {
-    @apply flex items-center justify-between px-4 py-2 rounded-md bg-destructive/20 border border-destructive/30 text-destructive-foreground animate-glow-pulse;
+    @apply flex items-center justify-between px-4 py-3 rounded-md bg-destructive/10 border border-destructive/30 text-destructive-foreground;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
   }
 
   .dark-nav {
@@ -204,5 +210,77 @@
 
   .settings-tab:not(.active) {
     @apply text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  @keyframes bounce-light {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+  
+  .animate-bounce-light {
+    animation: bounce-light 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+  
+  @keyframes glow-pulse {
+    0% {
+      box-shadow: 0 0 5px rgba(255, 0, 0, 0.1);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(255, 0, 0, 0.1);
+    }
+  }
+  
+  .animate-glow-pulse {
+    animation: glow-pulse 2s infinite;
+  }
+  
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.5s forwards;
+  }
+  
+  @keyframes ping-slow {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+  
+  .animate-ping-slow {
+    animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
   }
 }
