@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, LockKeyhole, Link2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,28 @@ interface ConnectionPanelProps {
   onConnect: (apiKey: string, apiUrl: string, blockchainUrl: string) => void;
   isLoading: boolean;
   isConnected: boolean;
+  initialValues?: {
+    apiKey: string;
+    apiUrl: string;
+    blockchainUrl: string;
+  };
 }
 
-const ConnectionPanel = ({ onConnect, isLoading, isConnected }: ConnectionPanelProps) => {
+const ConnectionPanel = ({ onConnect, isLoading, isConnected, initialValues }: ConnectionPanelProps) => {
   const { toast } = useToast();
-  const [apiKey, setApiKey] = useState('');
-  const [apiUrl, setApiUrl] = useState('http://localhost:8000/fake-attacks');
-  const [blockchainUrl, setBlockchainUrl] = useState('http://localhost:8000/blockchain');
+  const [apiKey, setApiKey] = useState(initialValues?.apiKey || '');
+  const [apiUrl, setApiUrl] = useState(initialValues?.apiUrl || 'http://localhost:8000/fake-attacks');
+  const [blockchainUrl, setBlockchainUrl] = useState(initialValues?.blockchainUrl || 'http://localhost:8000/blockchain');
   const [showPanel, setShowPanel] = useState(!isConnected);
+  
+  // Update form values when initialValues change
+  useEffect(() => {
+    if (initialValues) {
+      setApiKey(initialValues.apiKey || '');
+      setApiUrl(initialValues.apiUrl || 'http://localhost:8000/fake-attacks');
+      setBlockchainUrl(initialValues.blockchainUrl || 'http://localhost:8000/blockchain');
+    }
+  }, [initialValues]);
   
   const handleConnect = () => {
     if (!apiUrl) {
@@ -47,10 +61,10 @@ const ConnectionPanel = ({ onConnect, isLoading, isConnected }: ConnectionPanelP
         <Button 
           variant="outline" 
           size="sm" 
-          className="text-xs"
+          className="text-xs gap-1 glass-card"
           onClick={() => setShowPanel(true)}
         >
-          <Link2 className="h-3.5 w-3.5 mr-1" />
+          <Link2 className="h-3.5 w-3.5" />
           Connection Settings
         </Button>
       </div>
@@ -58,7 +72,7 @@ const ConnectionPanel = ({ onConnect, isLoading, isConnected }: ConnectionPanelP
   }
   
   return (
-    <Card className="animate-fade-in">
+    <Card className="animate-fade-in glass-card">
       <CardHeader>
         <CardTitle>Data Source Connection</CardTitle>
         <CardDescription>

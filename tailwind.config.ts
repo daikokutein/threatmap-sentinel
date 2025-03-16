@@ -111,6 +111,14 @@ export default {
 				},
 				spin: {
 					to: { transform: 'rotate(360deg)' }
+				},
+				'glow-pulse': {
+					'0%, 100%': { boxShadow: '0 0 5px 1px rgba(221, 83, 83, 0.2)' },
+					'50%': { boxShadow: '0 0 20px 5px rgba(221, 83, 83, 0.6)' }
+				},
+				'bounce-light': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-5px)' }
 				}
 			},
 			animation: {
@@ -122,6 +130,8 @@ export default {
 				'slide-right': 'slide-right 0.4s ease-out',
 				'ping-slow': 'ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite',
 				'spin': 'spin 1s linear infinite',
+				'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+				'bounce-light': 'bounce-light 2s ease-in-out infinite'
 			},
 			backdropFilter: {
 				'none': 'none',

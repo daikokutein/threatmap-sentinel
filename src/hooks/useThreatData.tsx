@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 export interface ThreatDetail {
@@ -65,6 +66,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   const [threatData, setThreatData] = useState<ThreatData[]>([]);
   const [blockchainData, setBlockchainData] = useState<BlockchainData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<number | null>(null);
   
   const fetchThreatData = useCallback(async () => {
     if (!apiUrl) return;
@@ -114,9 +116,25 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     }
   }, [blockchainUrl]);
   
+  const disconnect = useCallback(() => {
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    setIsConnected(false);
+    toast.info('Disconnected from data sources');
+  }, []);
+  
   const connectToSources = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Clear any existing interval
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     
     try {
       await Promise.all([
@@ -126,6 +144,12 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       
       setIsConnected(true);
       toast.success('Successfully connected to data sources');
+      
+      // Set up polling every 15 seconds
+      intervalRef.current = window.setInterval(() => {
+        fetchThreatData();
+        fetchBlockchainData();
+      }, 15000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed');
       setIsConnected(false);
@@ -134,25 +158,14 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     }
   }, [fetchThreatData, fetchBlockchainData]);
   
+  // Clean up on unmount
   useEffect(() => {
-    let interval: number | undefined;
-    
-    if (isConnected) {
-      // Initial fetch
-      fetchThreatData();
-      fetchBlockchainData();
-      
-      // Set up polling every 15 seconds
-      interval = window.setInterval(() => {
-        fetchThreatData();
-        fetchBlockchainData();
-      }, 15000);
-    }
-    
     return () => {
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
     };
-  }, [isConnected, fetchThreatData, fetchBlockchainData]);
+  }, []);
   
   // Statistics calculations
   const threatStats = {
@@ -171,6 +184,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     threatData,
     blockchainData,
     threatStats,
-    connectToSources
+    connectToSources,
+    disconnect
   };
 };
