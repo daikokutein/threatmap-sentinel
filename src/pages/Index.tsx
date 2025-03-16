@@ -10,7 +10,7 @@ import AlertBanner from '@/components/AlertBanner';
 import ThreatTrends from '@/components/ThreatTrends';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
-import { Toaster } from '@/components/ui/sonner';
+import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shield, AlertOctagon } from 'lucide-react';
 
@@ -61,6 +61,8 @@ const Index = () => {
   // Initialize audio element
   useEffect(() => {
     audioRef.current = new Audio('/alert.mp3');
+    audioRef.current.preload = 'auto'; // Preload for faster playback
+    
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -76,9 +78,18 @@ const Index = () => {
     threatData,
     blockchainData,
     threatStats,
+    reconnectAttempts,
+    isReconnecting,
     connectToSources,
-    disconnect
+    disconnect,
+    fetchThreatData,
+    fetchBlockchainData
   } = useThreatData(persistedSettings);
+  
+  // Toggle sound notifications
+  const toggleSound = () => {
+    setSoundEnabled(!soundEnabled);
+  };
   
   // Auto-connect on load if we have persisted settings
   useEffect(() => {
@@ -86,6 +97,18 @@ const Index = () => {
       connectToSources();
     }
   }, [persistedSettings, isConnected, isLoading, connectToSources]);
+  
+  // Force refresh data periodically even if interval fails
+  useEffect(() => {
+    if (isConnected && !isLoading) {
+      const forcedRefresh = setInterval(() => {
+        fetchThreatData();
+        fetchBlockchainData();
+      }, 15000); // Every 15 seconds as a backup
+      
+      return () => clearInterval(forcedRefresh);
+    }
+  }, [isConnected, isLoading, fetchThreatData, fetchBlockchainData]);
   
   // Handle new threats for alerts
   useEffect(() => {
@@ -103,19 +126,10 @@ const Index = () => {
       // Take the most recent high severity threat
       setCurrentAlert(highSeverityThreats[0]);
       
-      // Play sound alert
-      if (soundEnabled && audioRef.current) {
-        audioRef.current.volume = soundVolume / 100;
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(error => {
-          console.error('Failed to play alert sound:', error);
-        });
-      }
-      
       // Add to alert history
       setAlertHistory(prev => [...prev, highSeverityThreats[0].id]);
     }
-  }, [threatData, notificationsEnabled, alertHistory, soundEnabled, soundVolume]);
+  }, [threatData, notificationsEnabled, alertHistory]);
   
   const handleConnect = (apiKey: string, apiUrl: string, blockchainUrl: string) => {
     const newSettings = { apiKey, apiUrl, blockchainUrl };
@@ -136,7 +150,7 @@ const Index = () => {
   return (
     <ThemeProvider defaultTheme="dark">
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
-        <Toaster position="top-right" />
+        <Toaster position="top-right" richColors closeButton />
         <Header 
           isConnected={isConnected}
           connectionSettings={persistedSettings}
@@ -152,9 +166,14 @@ const Index = () => {
         />
         
         <main className="container mx-auto pt-24 pb-16 px-4 sm:px-6">
-          {isConnected && (
+          {(isConnected || isReconnecting) && (
             <div className="mb-4">
-              <ConnectionStatus isConnected={isConnected} lastUpdated={lastUpdated} />
+              <ConnectionStatus 
+                isConnected={isConnected} 
+                lastUpdated={lastUpdated}
+                isReconnecting={isReconnecting}
+                reconnectAttempts={reconnectAttempts} 
+              />
             </div>
           )}
           
@@ -166,10 +185,11 @@ const Index = () => {
                 onClose={() => setCurrentAlert(null)} 
                 soundEnabled={soundEnabled}
                 soundVolume={soundVolume}
+                toggleSound={toggleSound}
               />
             )}
             
-            {!isConnected && !isLoading ? (
+            {!isConnected && !isLoading && !isReconnecting ? (
               <div className="h-[70vh] flex flex-col items-center justify-center">
                 <div className="text-center space-y-6 max-w-lg">
                   <Shield className="h-20 w-20 text-primary opacity-20 mx-auto" />

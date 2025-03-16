@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -44,9 +43,10 @@ interface useThreatDataProps {
   blockchainUrl?: string;
 }
 
+// Cache for IP coordinates to ensure consistency
 const IP_CACHE: Record<string, [number, number]> = {};
 
-// Function to generate random coordinates for IPs not in the cache
+// Function to generate realistic coordinates for IPs not in the cache
 const getCoordinatesForIP = (ip: string): [number, number] => {
   if (IP_CACHE[ip]) {
     return IP_CACHE[ip];
@@ -68,11 +68,26 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [lastSuccessfulFetch, setLastSuccessfulFetch] = useState<Date | null>(null);
+  
   const intervalRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Keep track of seen threat IDs to detect new threats
+  const seenThreatIdsRef = useRef<Set<string>>(new Set());
   
   const fetchThreatData = useCallback(async () => {
     if (!apiUrl) return;
+    
+    // Cancel any in-progress requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create a new AbortController for this request
+    abortControllerRef.current = new AbortController();
     
     try {
       const headers: HeadersInit = {};
@@ -80,7 +95,12 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
       
-      const response = await fetch(apiUrl, { headers });
+      const response = await fetch(apiUrl, { 
+        headers,
+        signal: abortControllerRef.current.signal,
+        // Add cache busting parameter to prevent caching
+        cache: 'no-store'
+      });
       
       if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}`);
@@ -94,29 +114,60 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
         coordinates: getCoordinatesForIP(threat.ip)
       }));
       
+      // Check for new threats
+      const currentThreatIds = new Set(enrichedData.map(t => t.id));
+      const newThreats = enrichedData.filter(t => !seenThreatIdsRef.current.has(t.id));
+      
+      // Update seen threat IDs
+      enrichedData.forEach(t => seenThreatIdsRef.current.add(t.id));
+      
       setThreatData(enrichedData);
       setLastUpdated(new Date());
+      setLastSuccessfulFetch(new Date());
       
-      // Reset reconnect attempts on successful fetch
-      if (reconnectAttempts > 0) {
+      // Reset reconnect state on successful fetch
+      if (isReconnecting) {
+        setIsReconnecting(false);
         setReconnectAttempts(0);
-        toast.success('Reconnected to data sources');
+        toast.success('Reconnected to threat data source');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch threat data');
       
-      if (isConnected) {
-        toast.error('Connection to threat API lost. Attempting to reconnect...');
-        scheduleReconnect();
+      // If we weren't connected before, set connected now
+      if (!isConnected) {
+        setIsConnected(true);
       }
+      
+      // Return new threats for notification purposes
+      return { newThreats, success: true };
+    } catch (err) {
+      // Only set error if it's not an abort error
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err.message);
+        
+        if (isConnected && !isReconnecting) {
+          setIsReconnecting(true);
+          toast.error('Connection to threat API lost. Attempting to reconnect...');
+        }
+        
+        // If it was connected but now it's not, start reconnect process
+        if (isConnected) {
+          scheduleReconnect();
+        }
+        
+        return { newThreats: [], success: false };
+      }
+      return { newThreats: [], success: false, aborted: true };
     }
-  }, [apiUrl, apiKey, isConnected, reconnectAttempts]);
+  }, [apiUrl, apiKey, isConnected, isReconnecting]);
   
   const fetchBlockchainData = useCallback(async () => {
     if (!blockchainUrl) return;
     
     try {
-      const response = await fetch(blockchainUrl);
+      const response = await fetch(blockchainUrl, {
+        // Add cache busting parameter to prevent caching
+        cache: 'no-store'
+      });
       
       if (!response.ok) {
         throw new Error(`Blockchain request failed with status ${response.status}`);
@@ -125,15 +176,28 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       const data: BlockchainData = await response.json();
       setBlockchainData(data);
       setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch blockchain data');
+      setLastSuccessfulFetch(new Date());
       
-      if (isConnected) {
-        toast.error('Connection to blockchain lost. Attempting to reconnect...');
-        scheduleReconnect();
+      return { success: true };
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+        
+        if (isConnected && !isReconnecting) {
+          setIsReconnecting(true);
+          toast.error('Connection to blockchain lost. Attempting to reconnect...');
+        }
+        
+        // If it was connected but now it's not, start reconnect process
+        if (isConnected) {
+          scheduleReconnect();
+        }
+        
+        return { success: false };
       }
+      return { success: false };
     }
-  }, [blockchainUrl, isConnected]);
+  }, [blockchainUrl, isConnected, isReconnecting]);
   
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -145,13 +209,20 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     
     reconnectTimeoutRef.current = window.setTimeout(() => {
       setReconnectAttempts(prev => prev + 1);
-      fetchThreatData();
-      fetchBlockchainData();
+      Promise.all([
+        fetchThreatData(),
+        fetchBlockchainData()
+      ]);
     }, delay);
     
   }, [reconnectAttempts, fetchThreatData, fetchBlockchainData]);
   
   const disconnect = useCallback(() => {
+    // Cancel any in-progress requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     if (intervalRef.current) {
       window.clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -163,6 +234,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     }
     
     setIsConnected(false);
+    setIsReconnecting(false);
     setReconnectAttempts(0);
     toast.info('Disconnected from data sources');
   }, []);
@@ -183,20 +255,28 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     }
     
     try {
-      await Promise.all([
+      const results = await Promise.all([
         fetchThreatData(),
         fetchBlockchainData()
       ]);
       
-      setIsConnected(true);
-      setReconnectAttempts(0);
-      toast.success('Successfully connected to data sources');
+      const allSuccessful = results.every(result => result?.success);
       
-      // Set up polling every 10 seconds
-      intervalRef.current = window.setInterval(() => {
-        fetchThreatData();
-        fetchBlockchainData();
-      }, 10000);
+      if (allSuccessful) {
+        setIsConnected(true);
+        setIsReconnecting(false);
+        setReconnectAttempts(0);
+        toast.success('Successfully connected to data sources');
+        
+        // Set up polling every 5 seconds (reduced from 10 for more real-time updates)
+        intervalRef.current = window.setInterval(() => {
+          fetchThreatData();
+          fetchBlockchainData();
+        }, 5000);
+      } else {
+        toast.error('Failed to connect to one or more data sources');
+        setIsConnected(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed');
       setIsConnected(false);
@@ -216,17 +296,39 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
       }
+      
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
   
-  // Statistics calculations
+  // Check for stale data periodically
+  useEffect(() => {
+    const staleDataCheck = setInterval(() => {
+      if (isConnected && lastSuccessfulFetch) {
+        const now = new Date();
+        const timeSinceLastFetch = now.getTime() - lastSuccessfulFetch.getTime();
+        
+        // If last successful fetch was more than 15 seconds ago, try reconnecting
+        if (timeSinceLastFetch > 15000 && !isReconnecting) {
+          setIsReconnecting(true);
+          scheduleReconnect();
+        }
+      }
+    }, 5000);
+    
+    return () => clearInterval(staleDataCheck);
+  }, [isConnected, lastSuccessfulFetch, isReconnecting, scheduleReconnect]);
+  
+  // Statistics calculations with error handling
   const threatStats = {
-    total: threatData.length,
-    high: threatData.filter(t => t.severity === 'High').length,
-    medium: threatData.filter(t => t.severity === 'Medium').length,
-    low: threatData.filter(t => t.severity === 'Low').length,
-    mitigated: threatData.filter(t => t.status === 'Mitigated').length,
-    active: threatData.filter(t => t.status !== 'Mitigated').length,
+    total: threatData.length || 0,
+    high: threatData.filter(t => t.severity === 'High').length || 0,
+    medium: threatData.filter(t => t.severity === 'Medium').length || 0,
+    low: threatData.filter(t => t.severity === 'Low').length || 0,
+    mitigated: threatData.filter(t => t.status === 'Mitigated').length || 0,
+    active: threatData.filter(t => t.status !== 'Mitigated').length || 0,
   };
   
   return {
@@ -238,7 +340,10 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     blockchainData,
     threatStats,
     reconnectAttempts,
+    isReconnecting,
     connectToSources,
-    disconnect
+    disconnect,
+    fetchThreatData,
+    fetchBlockchainData
   };
 };
