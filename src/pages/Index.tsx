@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import ThreatStats from '@/components/ThreatStats';
@@ -40,6 +41,7 @@ const Index = () => {
   const [alertHistory, setAlertHistory] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
+  // Save settings to localStorage when they change
   useEffect(() => {
     localStorage.setItem('sentinel-connection-settings', JSON.stringify(persistedSettings));
   }, [persistedSettings]);
@@ -56,9 +58,10 @@ const Index = () => {
     localStorage.setItem('sentinel-sound-volume', soundVolume.toString());
   }, [soundVolume]);
 
+  // Initialize audio element
   useEffect(() => {
     audioRef.current = new Audio('/alert.mp3');
-    audioRef.current.preload = 'auto';
+    audioRef.current.preload = 'auto'; // Preload for faster playback
     
     return () => {
       if (audioRef.current) {
@@ -83,30 +86,35 @@ const Index = () => {
     fetchBlockchainData
   } = useThreatData(persistedSettings);
   
+  // Toggle sound notifications
   const toggleSound = () => {
     setSoundEnabled(!soundEnabled);
   };
   
+  // Auto-connect on load if we have persisted settings
   useEffect(() => {
     if (persistedSettings.apiUrl && persistedSettings.blockchainUrl && !isConnected && !isLoading) {
       connectToSources();
     }
   }, [persistedSettings, isConnected, isLoading, connectToSources]);
   
+  // Force refresh data periodically even if interval fails
   useEffect(() => {
     if (isConnected && !isLoading) {
       const forcedRefresh = setInterval(() => {
         fetchThreatData();
         fetchBlockchainData();
-      }, 15000);
+      }, 15000); // Every 15 seconds as a backup
       
       return () => clearInterval(forcedRefresh);
     }
   }, [isConnected, isLoading, fetchThreatData, fetchBlockchainData]);
   
+  // Handle new threats for alerts
   useEffect(() => {
     if (!threatData.length || !notificationsEnabled) return;
     
+    // Check for new high severity threats that aren't in alert history
     const highSeverityThreats = threatData
       .filter(threat => 
         threat.severity === 'High' && 
@@ -115,22 +123,18 @@ const Index = () => {
       );
     
     if (highSeverityThreats.length > 0) {
+      // Take the most recent high severity threat
       setCurrentAlert(highSeverityThreats[0]);
+      
+      // Add to alert history
       setAlertHistory(prev => [...prev, highSeverityThreats[0].id]);
     }
   }, [threatData, notificationsEnabled, alertHistory]);
   
   const handleConnect = (apiKey: string, apiUrl: string, blockchainUrl: string) => {
-    try {
-      new URL(apiUrl);
-      new URL(blockchainUrl);
-      
-      const newSettings = { apiKey, apiUrl, blockchainUrl };
-      setPersistedSettings(newSettings);
-      connectToSources();
-    } catch (err) {
-      console.error("Invalid URL format", err);
-    }
+    const newSettings = { apiKey, apiUrl, blockchainUrl };
+    setPersistedSettings(newSettings);
+    connectToSources();
   };
   
   const handleDisconnect = () => {
@@ -174,6 +178,7 @@ const Index = () => {
           )}
           
           <div className="space-y-6">
+            {/* Alert Banner */}
             {currentAlert && (
               <AlertBanner 
                 threat={currentAlert} 
@@ -205,6 +210,7 @@ const Index = () => {
               </div>
             ) : (
               <>
+                {/* Stats & Activity Overview */}
                 <section className="dashboard-grid">
                   <div className="md:col-span-3">
                     <ThreatStats {...threatStats} />
@@ -219,6 +225,7 @@ const Index = () => {
                   </div>
                 </section>
                 
+                {/* Map & Analytics */}
                 <section className="dashboard-grid">
                   <div className="md:col-span-8 h-[400px]">
                     <ThreatMap threats={threatData} />
@@ -228,6 +235,7 @@ const Index = () => {
                   </div>
                 </section>
 
+                {/* Trends & Analytics */}
                 <section>
                   <ThreatTrends threats={threatData} />
                 </section>
