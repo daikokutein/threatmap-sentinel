@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
 import ThreatStats from '@/components/ThreatStats';
 import LiveAttackFeed from '@/components/LiveAttackFeed';
@@ -8,10 +8,11 @@ import BlockchainViewer from '@/components/BlockchainViewer';
 import ThreatChart from '@/components/ThreatChart';
 import AlertBanner from '@/components/AlertBanner';
 import ThreatTrends from '@/components/ThreatTrends';
+import ConnectionStatus from '@/components/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
-import { Shield } from 'lucide-react';
+import { Shield, AlertOctagon } from 'lucide-react';
 
 const Index = () => {
   // Load persisted settings from localStorage with error handling
@@ -65,7 +66,6 @@ const Index = () => {
   const [alertHistory, setAlertHistory] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
-  const prevThreatDataRef = useRef<ThreatData[]>([]);
   
   // Safely persist settings to localStorage
   const safelyPersistToStorage = useCallback((key: string, value: any) => {
@@ -95,12 +95,10 @@ const Index = () => {
   // Initialize audio with proper error handling
   useEffect(() => {
     try {
-      const audio = new Audio('/alert.mp3');
-      audio.preload = 'auto';
-      audioRef.current = audio;
+      audioRef.current = new Audio('/alert.mp3');
+      audioRef.current.preload = 'auto';
       
       const handleAudioLoaded = () => {
-        console.log('Audio loaded successfully');
         setAudioLoaded(true);
       };
       
@@ -109,11 +107,10 @@ const Index = () => {
         setAudioLoaded(false);
       };
       
-      audioRef.current.addEventListener('canplaythrough', handleAudioLoaded);
-      audioRef.current.addEventListener('error', handleAudioError as EventListener);
-      
-      // Attempt to load audio file
-      audioRef.current.load();
+      if (audioRef.current) {
+        audioRef.current.addEventListener('canplaythrough', handleAudioLoaded);
+        audioRef.current.addEventListener('error', handleAudioError as EventListener);
+      }
       
       return () => {
         if (audioRef.current) {
@@ -144,38 +141,6 @@ const Index = () => {
     fetchBlockchainData
   } = useThreatData(persistedSettings);
   
-  // Check if threats have actually changed to avoid unnecessary re-renders
-  const hasThreatsChanged = useMemo(() => {
-    if (prevThreatDataRef.current.length !== threatData.length) {
-      return true;
-    }
-    
-    // Check if any threat has changed
-    const prevIds = new Set(prevThreatDataRef.current.map(t => t.id));
-    const currentIds = new Set(threatData.map(t => t.id));
-    
-    // Check if IDs are different
-    if (prevIds.size !== currentIds.size) {
-      return true;
-    }
-    
-    // Check if all current IDs exist in previous IDs
-    for (const id of currentIds) {
-      if (!prevIds.has(id)) {
-        return true;
-      }
-    }
-    
-    return false;
-  }, [threatData]);
-  
-  // Update the reference when threats have actually changed
-  useEffect(() => {
-    if (hasThreatsChanged) {
-      prevThreatDataRef.current = threatData;
-    }
-  }, [hasThreatsChanged, threatData]);
-  
   const toggleSound = useCallback(() => {
     setSoundEnabled(!soundEnabled);
   }, [soundEnabled]);
@@ -200,6 +165,9 @@ const Index = () => {
           fetchBlockchainData().catch(err => console.error('Error fetching blockchain data:', err));
         };
         
+        // Initial fetch
+        updateData();
+        
         // Regular polling
         const forcedRefresh = setInterval(updateData, 10000);
         
@@ -210,9 +178,9 @@ const Index = () => {
     }
   }, [isConnected, isLoading, fetchThreatData, fetchBlockchainData]);
   
-  // Handle high severity threats for alerts - only when there are new threats
+  // Handle high severity threats for alerts
   useEffect(() => {
-    if (!threatData.length || !notificationsEnabled || !hasThreatsChanged) return;
+    if (!threatData.length || !notificationsEnabled) return;
     
     try {
       const highSeverityThreats = threatData
@@ -231,18 +199,7 @@ const Index = () => {
           try {
             audioRef.current.volume = soundVolume / 100;
             audioRef.current.currentTime = 0;
-            const playPromise = audioRef.current.play();
-            
-            if (playPromise !== undefined) {
-              playPromise.catch(err => {
-                console.error('Error playing audio:', err);
-                // If autoplay is blocked, try playing on user interaction
-                document.addEventListener('click', function playOnClick() {
-                  audioRef.current?.play();
-                  document.removeEventListener('click', playOnClick);
-                }, { once: true });
-              });
-            }
+            audioRef.current.play().catch(err => console.error('Error playing audio:', err));
           } catch (error) {
             console.error('Error playing alert sound:', error);
           }
@@ -251,7 +208,7 @@ const Index = () => {
     } catch (error) {
       console.error('Error processing threats for alerts:', error);
     }
-  }, [threatData, notificationsEnabled, alertHistory, soundEnabled, soundVolume, audioLoaded, hasThreatsChanged]);
+  }, [threatData, notificationsEnabled, alertHistory, soundEnabled, soundVolume, audioLoaded]);
   
   // Safely validate URLs and connect
   const handleConnect = useCallback((apiKey: string, apiUrl: string, blockchainUrl: string) => {
@@ -294,12 +251,20 @@ const Index = () => {
           setNotificationsEnabled={setNotificationsEnabled}
           soundVolume={soundVolume}
           setSoundVolume={setSoundVolume}
-          lastUpdated={lastUpdated}
-          isReconnecting={isReconnecting}
-          reconnectAttempts={reconnectAttempts}
         />
         
         <main className="container mx-auto pt-24 pb-16 px-4 sm:px-6">
+          {(isConnected || isReconnecting) && (
+            <div className="mb-4">
+              <ConnectionStatus 
+                isConnected={isConnected} 
+                lastUpdated={lastUpdated}
+                isReconnecting={isReconnecting}
+                reconnectAttempts={reconnectAttempts} 
+              />
+            </div>
+          )}
+          
           <div className="space-y-6">
             {currentAlert && (
               <AlertBanner 

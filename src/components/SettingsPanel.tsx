@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Bell, 
   Moon, 
@@ -13,8 +13,7 @@ import {
   KeyRound,
   Globe,
   Server,
-  ExternalLink,
-  AlertTriangle
+  ExternalLink
 } from 'lucide-react';
 import { 
   Dialog, 
@@ -97,16 +96,14 @@ const SettingsPanel = ({
   const [blockchainHost, setBlockchainHost] = useState('');
   const [apiPath, setApiPath] = useState('/fake-attacks');
   const [blockchainPath, setBlockchainPath] = useState('/chain');
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  useEffect(() => {
+  useState(() => {
     if (connectionSettings.apiUrl) {
       try {
         const url = new URL(connectionSettings.apiUrl);
         setApiHost(url.origin);
         setApiPath(url.pathname);
       } catch (e) {
-        setApiUrl(connectionSettings.apiUrl);
       }
     }
     
@@ -116,10 +113,9 @@ const SettingsPanel = ({
         setBlockchainHost(url.origin);
         setBlockchainPath(url.pathname);
       } catch (e) {
-        setBlockchainUrl(connectionSettings.blockchainUrl);
       }
     }
-  }, [connectionSettings]);
+  });
 
   const getFullApiUrl = () => {
     if (apiInputMode === 'full') {
@@ -153,40 +149,9 @@ const SettingsPanel = ({
     }
   };
 
-  const validateUrls = () => {
-    setConnectionError(null);
-    
-    try {
-      if (apiInputMode === 'full') {
-        new URL(apiUrl);
-      } else {
-        if (!apiHost) {
-          throw new Error('API host is required');
-        }
-        new URL(apiHost.startsWith('http') ? apiHost : `https://${apiHost}`);
-      }
-      
-      if (blockchainInputMode === 'full') {
-        new URL(blockchainUrl);
-      } else {
-        if (!blockchainHost) {
-          throw new Error('Blockchain host is required');
-        }
-        new URL(blockchainHost.startsWith('http') ? blockchainHost : `https://${blockchainHost}`);
-      }
-      
-      return true;
-    } catch (error) {
-      setConnectionError(error instanceof Error ? error.message : 'Invalid URL format');
-      return false;
-    }
-  };
-
   const handleConnect = () => {
-    if (validateUrls()) {
-      onConnect(apiKey, getFullApiUrl(), getFullBlockchainUrl());
-      setIsOpen(false);
-    }
+    onConnect(apiKey, getFullApiUrl(), getFullBlockchainUrl());
+    setIsOpen(false);
   };
 
   return (
@@ -320,7 +285,7 @@ const SettingsPanel = ({
                       </div>
                     </div>
                     
-                    {isConnected ? (
+                    {isConnected && (
                       <>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">API URL</span>
@@ -332,12 +297,7 @@ const SettingsPanel = ({
                           <span className="text-sm font-mono truncate max-w-[250px]">{connectionSettings.blockchainUrl}</span>
                         </div>
                       </>
-                    ) : connectionError ? (
-                      <div className="mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
-                        <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1" />
-                        {connectionError}
-                      </div>
-                    ) : null}
+                    )}
                   </div>
                 </div>
                 

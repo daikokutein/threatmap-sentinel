@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Signal, Clock, AlertTriangle, Loader2 } from 'lucide-react';
+import { Wifi, WifiOff, Clock, Signal, AlertTriangle, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -21,7 +21,6 @@ const ConnectionStatus = ({
   const [timeAgo, setTimeAgo] = useState<string>('');
   const [staleData, setStaleData] = useState<boolean>(false);
   const staleWarningShownRef = useRef<boolean>(false);
-  const prevLastUpdatedRef = useRef<Date | null>(lastUpdated);
   
   useEffect(() => {
     const updateTime = () => {
@@ -54,13 +53,8 @@ const ConnectionStatus = ({
       }
     };
     
-    // Only update if lastUpdated actually changed
-    if (lastUpdated !== prevLastUpdatedRef.current) {
-      updateTime();
-      prevLastUpdatedRef.current = lastUpdated;
-    }
-    
-    const interval = setInterval(updateTime, 10000); // Less frequent updates to reduce re-renders
+    updateTime();
+    const interval = setInterval(updateTime, 5000);
     
     return () => clearInterval(interval);
   }, [lastUpdated, isConnected, staleData]);
@@ -75,7 +69,7 @@ const ConnectionStatus = ({
           {isReconnecting ? (
             <>
               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              <span>Reconnecting{reconnectAttempts > 0 ? ` (${reconnectAttempts})` : ''}</span>
+              <span>Reconnecting{reconnectAttempts > 0 ? ` (attempt ${reconnectAttempts})` : ''}</span>
             </>
           ) : staleData ? (
             <>
@@ -100,7 +94,7 @@ const ConnectionStatus = ({
         </div>
       ) : (
         <div className="flex items-center text-red-500">
-          <AlertTriangle className="h-3 w-3 mr-1" />
+          <WifiOff className="h-3 w-3 mr-1" />
           <span>Disconnected</span>
           {isReconnecting && (
             <span className="ml-1">- Attempting to reconnect{reconnectAttempts > 0 ? ` (${reconnectAttempts})` : ''}</span>
