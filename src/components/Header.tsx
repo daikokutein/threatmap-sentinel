@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Settings } from 'lucide-react';
 import SettingsPanel from './SettingsPanel';
 import { Button } from "@/components/ui/button";
+import ConnectionStatus from './ConnectionStatus';
 
 interface HeaderProps {
   isConnected: boolean;
@@ -20,6 +21,9 @@ interface HeaderProps {
   setNotificationsEnabled: (enabled: boolean) => void;
   soundVolume: number;
   setSoundVolume: (volume: number) => void;
+  lastUpdated: Date | null;
+  isReconnecting?: boolean;
+  reconnectAttempts?: number;
 }
 
 const Header = ({
@@ -33,7 +37,10 @@ const Header = ({
   notificationsEnabled,
   setNotificationsEnabled,
   soundVolume,
-  setSoundVolume
+  setSoundVolume,
+  lastUpdated,
+  isReconnecting = false,
+  reconnectAttempts = 0
 }: HeaderProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -49,22 +56,8 @@ const Header = ({
   return (
     <header className="fixed top-0 left-0 right-0 z-10 dark-nav">
       <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-        <div className="flex items-center">
-          <Shield className="h-6 w-6 text-primary mr-2" />
-          <h1 className="text-lg font-medium">Sentinel</h1>
-        </div>
-        
         <div className="flex items-center space-x-4">
-          <div className="hidden md:block text-sm text-muted-foreground">
-            {currentTime.toLocaleTimeString(undefined, { 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              second: '2-digit',
-              hour12: false
-            })}
-          </div>
-          
-          <div id="settings-trigger" className="relative z-20">
+          <div id="settings-trigger" className="relative z-20 mr-3">
             <SettingsPanel 
               connectionSettings={connectionSettings}
               isConnected={isConnected}
@@ -79,6 +72,30 @@ const Header = ({
               setSoundVolume={setSoundVolume}
             />
           </div>
+          <Shield className="h-6 w-6 text-primary mr-2" />
+          <h1 className="text-lg font-medium">Sentinel</h1>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="hidden md:block text-sm text-muted-foreground">
+            {currentTime.toLocaleTimeString(undefined, { 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              second: '2-digit',
+              hour12: false
+            })}
+          </div>
+          
+          {isConnected || isReconnecting ? (
+            <div className="text-xs">
+              <ConnectionStatus 
+                isConnected={isConnected} 
+                lastUpdated={lastUpdated}
+                isReconnecting={isReconnecting}
+                reconnectAttempts={reconnectAttempts} 
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </header>
