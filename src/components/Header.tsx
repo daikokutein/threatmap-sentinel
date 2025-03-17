@@ -1,7 +1,8 @@
 
-import { useState } from 'react';
-import { Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, Settings } from 'lucide-react';
 import SettingsPanel from './SettingsPanel';
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   isConnected: boolean;
@@ -37,13 +38,13 @@ const Header = ({
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // Update current time every second
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
     
     return () => clearInterval(interval);
-  });
+  }, []);
   
   return (
     <header className="fixed top-0 left-0 right-0 z-10 dark-nav">
@@ -63,7 +64,7 @@ const Header = ({
             })}
           </div>
           
-          <div id="settings-trigger">
+          <div id="settings-trigger" className="z-20 absolute top-3 right-3 md:static">
             <SettingsPanel 
               connectionSettings={connectionSettings}
               isConnected={isConnected}

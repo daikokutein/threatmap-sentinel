@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
 import ThreatStats from '@/components/ThreatStats';
 import LiveAttackFeed from '@/components/LiveAttackFeed';
@@ -14,57 +15,114 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Shield, AlertOctagon } from 'lucide-react';
 
 const Index = () => {
+  // Load persisted settings from localStorage with error handling
   const [persistedSettings, setPersistedSettings] = useState(() => {
-    const stored = localStorage.getItem('sentinel-connection-settings');
-    return stored ? JSON.parse(stored) : {
-      apiKey: '',
-      apiUrl: '',
-      blockchainUrl: '',
-    };
+    try {
+      const stored = localStorage.getItem('sentinel-connection-settings');
+      return stored ? JSON.parse(stored) : {
+        apiKey: '',
+        apiUrl: '',
+        blockchainUrl: '',
+      };
+    } catch (error) {
+      console.error('Error loading persisted settings:', error);
+      return {
+        apiKey: '',
+        apiUrl: '',
+        blockchainUrl: '',
+      };
+    }
   });
   
   const [soundEnabled, setSoundEnabled] = useState(() => {
-    return localStorage.getItem('sentinel-sound-enabled') === 'true';
+    try {
+      return localStorage.getItem('sentinel-sound-enabled') === 'true';
+    } catch (error) {
+      console.error('Error loading sound setting:', error);
+      return false;
+    }
   });
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    return localStorage.getItem('sentinel-notifications-enabled') !== 'false';
+    try {
+      return localStorage.getItem('sentinel-notifications-enabled') !== 'false';
+    } catch (error) {
+      console.error('Error loading notifications setting:', error);
+      return true;
+    }
   });
   
   const [soundVolume, setSoundVolume] = useState(() => {
-    const storedVolume = localStorage.getItem('sentinel-sound-volume');
-    return storedVolume ? parseInt(storedVolume, 10) : 70;
+    try {
+      const storedVolume = localStorage.getItem('sentinel-sound-volume');
+      return storedVolume ? parseInt(storedVolume, 10) : 70;
+    } catch (error) {
+      console.error('Error loading volume setting:', error);
+      return 70;
+    }
   });
   
   const [currentAlert, setCurrentAlert] = useState<ThreatData | null>(null);
   const [alertHistory, setAlertHistory] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  
+  // Safely persist settings to localStorage
+  const safelyPersistToStorage = useCallback((key: string, value: any) => {
+    try {
+      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+    } catch (error) {
+      console.error(`Error persisting ${key} to localStorage:`, error);
+    }
+  }, []);
   
   useEffect(() => {
-    localStorage.setItem('sentinel-connection-settings', JSON.stringify(persistedSettings));
-  }, [persistedSettings]);
+    safelyPersistToStorage('sentinel-connection-settings', persistedSettings);
+  }, [persistedSettings, safelyPersistToStorage]);
   
   useEffect(() => {
-    localStorage.setItem('sentinel-sound-enabled', soundEnabled.toString());
-  }, [soundEnabled]);
+    safelyPersistToStorage('sentinel-sound-enabled', soundEnabled.toString());
+  }, [soundEnabled, safelyPersistToStorage]);
   
   useEffect(() => {
-    localStorage.setItem('sentinel-notifications-enabled', notificationsEnabled.toString());
-  }, [notificationsEnabled]);
+    safelyPersistToStorage('sentinel-notifications-enabled', notificationsEnabled.toString());
+  }, [notificationsEnabled, safelyPersistToStorage]);
   
   useEffect(() => {
-    localStorage.setItem('sentinel-sound-volume', soundVolume.toString());
-  }, [soundVolume]);
+    safelyPersistToStorage('sentinel-sound-volume', soundVolume.toString());
+  }, [soundVolume, safelyPersistToStorage]);
 
+  // Initialize audio with proper error handling
   useEffect(() => {
-    audioRef.current = new Audio('/alert.mp3');
-    audioRef.current.preload = 'auto';
-    
-    return () => {
+    try {
+      audioRef.current = new Audio('/alert.mp3');
+      audioRef.current.preload = 'auto';
+      
+      const handleAudioLoaded = () => {
+        setAudioLoaded(true);
+      };
+      
+      const handleAudioError = (e: ErrorEvent) => {
+        console.error('Error loading audio:', e);
+        setAudioLoaded(false);
+      };
+      
       if (audioRef.current) {
-        audioRef.current.pause();
+        audioRef.current.addEventListener('canplaythrough', handleAudioLoaded);
+        audioRef.current.addEventListener('error', handleAudioError as EventListener);
       }
-    };
+      
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.removeEventListener('canplaythrough', handleAudioLoaded);
+          audioRef.current.removeEventListener('error', handleAudioError as EventListener);
+        }
+      };
+    } catch (error) {
+      console.error('Error initializing audio:', error);
+      return () => {};
+    }
   }, []);
   
   const { 
@@ -83,45 +141,79 @@ const Index = () => {
     fetchBlockchainData
   } = useThreatData(persistedSettings);
   
-  const toggleSound = () => {
+  const toggleSound = useCallback(() => {
     setSoundEnabled(!soundEnabled);
-  };
+  }, [soundEnabled]);
   
+  // Connect to sources when settings are available and connection is not active
   useEffect(() => {
-    if (persistedSettings.apiUrl && persistedSettings.blockchainUrl && !isConnected && !isLoading) {
-      connectToSources();
+    if (persistedSettings.apiUrl && persistedSettings.blockchainUrl && !isConnected && !isLoading && !isReconnecting) {
+      try {
+        connectToSources();
+      } catch (error) {
+        console.error('Error connecting to sources:', error);
+      }
     }
-  }, [persistedSettings, isConnected, isLoading, connectToSources]);
+  }, [persistedSettings, isConnected, isLoading, isReconnecting, connectToSources]);
   
+  // Establish a reliable polling mechanism for data updates
   useEffect(() => {
     if (isConnected && !isLoading) {
-      const forcedRefresh = setInterval(() => {
-        fetchThreatData();
-        fetchBlockchainData();
-      }, 15000);
-      
-      return () => clearInterval(forcedRefresh);
+      try {
+        const updateData = () => {
+          fetchThreatData().catch(err => console.error('Error fetching threat data:', err));
+          fetchBlockchainData().catch(err => console.error('Error fetching blockchain data:', err));
+        };
+        
+        // Initial fetch
+        updateData();
+        
+        // Regular polling
+        const forcedRefresh = setInterval(updateData, 10000);
+        
+        return () => clearInterval(forcedRefresh);
+      } catch (error) {
+        console.error('Error in update effect:', error);
+      }
     }
   }, [isConnected, isLoading, fetchThreatData, fetchBlockchainData]);
   
+  // Handle high severity threats for alerts
   useEffect(() => {
     if (!threatData.length || !notificationsEnabled) return;
     
-    const highSeverityThreats = threatData
-      .filter(threat => 
-        threat.severity === 'High' && 
-        threat.status !== 'Mitigated' && 
-        !alertHistory.includes(threat.id)
-      );
-    
-    if (highSeverityThreats.length > 0) {
-      setCurrentAlert(highSeverityThreats[0]);
-      setAlertHistory(prev => [...prev, highSeverityThreats[0].id]);
-    }
-  }, [threatData, notificationsEnabled, alertHistory]);
-  
-  const handleConnect = (apiKey: string, apiUrl: string, blockchainUrl: string) => {
     try {
+      const highSeverityThreats = threatData
+        .filter(threat => 
+          threat.severity === 'High' && 
+          threat.status !== 'Mitigated' && 
+          !alertHistory.includes(threat.id)
+        );
+      
+      if (highSeverityThreats.length > 0) {
+        setCurrentAlert(highSeverityThreats[0]);
+        setAlertHistory(prev => [...prev, highSeverityThreats[0].id]);
+        
+        // Play sound for high severity threats if enabled
+        if (soundEnabled && audioRef.current && audioLoaded) {
+          try {
+            audioRef.current.volume = soundVolume / 100;
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(err => console.error('Error playing audio:', err));
+          } catch (error) {
+            console.error('Error playing alert sound:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing threats for alerts:', error);
+    }
+  }, [threatData, notificationsEnabled, alertHistory, soundEnabled, soundVolume, audioLoaded]);
+  
+  // Safely validate URLs and connect
+  const handleConnect = useCallback((apiKey: string, apiUrl: string, blockchainUrl: string) => {
+    try {
+      // Basic URL validation
       new URL(apiUrl);
       new URL(blockchainUrl);
       
@@ -131,17 +223,17 @@ const Index = () => {
     } catch (err) {
       console.error("Invalid URL format", err);
     }
-  };
+  }, [connectToSources]);
   
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     disconnect();
-  };
+  }, [disconnect]);
   
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     const newSettings = { apiKey: '', apiUrl: '', blockchainUrl: '' };
     setPersistedSettings(newSettings);
     disconnect();
-  };
+  }, [disconnect]);
   
   return (
     <ThemeProvider defaultTheme="dark">
@@ -206,20 +298,21 @@ const Index = () => {
             ) : (
               <>
                 <section className="dashboard-grid">
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-12">
                     <ThreatStats {...threatStats} />
-                  </div>
-                  <div className="md:col-span-9 grid grid-cols-1 md:grid-cols-9 gap-6">
-                    <div className="md:col-span-5 h-[500px]">
-                      <LiveAttackFeed threats={threatData} />
-                    </div>
-                    <div className="md:col-span-4 h-[500px]">
-                      <ThreatChart threats={threatData} />
-                    </div>
                   </div>
                 </section>
                 
-                <section className="dashboard-grid">
+                <section className="dashboard-grid mt-6">
+                  <div className="md:col-span-5 h-[500px]">
+                    <LiveAttackFeed threats={threatData} />
+                  </div>
+                  <div className="md:col-span-7 h-[500px]">
+                    <ThreatChart threats={threatData} />
+                  </div>
+                </section>
+                
+                <section className="dashboard-grid mt-6">
                   <div className="md:col-span-8 h-[400px]">
                     <ThreatMap threats={threatData} />
                   </div>
@@ -228,7 +321,7 @@ const Index = () => {
                   </div>
                 </section>
 
-                <section>
+                <section className="mt-6">
                   <ThreatTrends threats={threatData} />
                 </section>
               </>

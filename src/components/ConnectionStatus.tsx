@@ -24,18 +24,22 @@ const ConnectionStatus = ({
   useEffect(() => {
     const updateTime = () => {
       if (lastUpdated) {
-        setTimeAgo(formatDistanceToNow(lastUpdated, { addSuffix: true }));
-        
-        // Check if data is stale (older than 30 seconds)
-        const now = new Date();
-        const timeDiff = now.getTime() - lastUpdated.getTime();
-        setStaleData(isConnected && timeDiff > 30000);
-        
-        // Show toast for stale data only once
-        if (staleData && isConnected && timeDiff > 30000 && timeDiff < 40000) {
-          toast.warning("Data hasn't updated recently. Possible connection issues.", {
-            id: "stale-data-warning",
-          });
+        try {
+          setTimeAgo(formatDistanceToNow(lastUpdated, { addSuffix: true }));
+          
+          // Check if data is stale (older than 30 seconds)
+          const now = new Date();
+          const timeDiff = now.getTime() - lastUpdated.getTime();
+          setStaleData(isConnected && timeDiff > 30000);
+          
+          // Show toast for stale data only once
+          if (staleData && isConnected && timeDiff > 30000 && timeDiff < 40000) {
+            toast.warning("Data hasn't updated recently. Possible connection issues.", {
+              id: "stale-data-warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error formatting time:", error);
         }
       }
     };
