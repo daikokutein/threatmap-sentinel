@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Wifi, WifiOff, Clock, Signal, AlertTriangle, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ const ConnectionStatus = ({
 }: ConnectionStatusProps) => {
   const [timeAgo, setTimeAgo] = useState<string>('');
   const [staleData, setStaleData] = useState<boolean>(false);
+  const staleWarningShownRef = useRef<boolean>(false);
   
   useEffect(() => {
     const updateTime = () => {
@@ -30,13 +31,21 @@ const ConnectionStatus = ({
           // Check if data is stale (older than 30 seconds)
           const now = new Date();
           const timeDiff = now.getTime() - lastUpdated.getTime();
-          setStaleData(isConnected && timeDiff > 30000);
+          const isDataStale = isConnected && timeDiff > 30000;
+          
+          // Only update staleData state if it's actually changing
+          if (isDataStale !== staleData) {
+            setStaleData(isDataStale);
+          }
           
           // Show toast for stale data only once
-          if (staleData && isConnected && timeDiff > 30000 && timeDiff < 40000) {
+          if (isDataStale && isConnected && !staleWarningShownRef.current) {
             toast.warning("Data hasn't updated recently. Possible connection issues.", {
               id: "stale-data-warning",
             });
+            staleWarningShownRef.current = true;
+          } else if (!isDataStale) {
+            staleWarningShownRef.current = false;
           }
         } catch (error) {
           console.error("Error formatting time:", error);

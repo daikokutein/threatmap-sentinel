@@ -1,9 +1,9 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { ThreatData } from '@/hooks/useThreatData';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, isEqual } from 'date-fns';
 import { AlertOctagon, TrendingUp } from 'lucide-react';
 
 interface ThreatTrendsProps {
@@ -13,9 +13,37 @@ interface ThreatTrendsProps {
 const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
   const [dailyData, setDailyData] = useState<any[]>([]);
   const [typeData, setTypeData] = useState<any[]>([]);
+  const previousThreatsRef = useRef<ThreatData[]>([]);
+  
+  // Function to check if threats data has actually changed in a meaningful way
+  const hasThreatsChanged = (oldThreats: ThreatData[], newThreats: ThreatData[]) => {
+    if (oldThreats.length !== newThreats.length) return true;
+    
+    // Create a set of threat IDs for quick lookup
+    const oldIds = new Set(oldThreats.map(t => t.id));
+    const newIds = new Set(newThreats.map(t => t.id));
+    
+    // Check if any new IDs appeared
+    for (const id of newIds) {
+      if (!oldIds.has(id)) return true;
+    }
+    
+    // Check if any IDs disappeared
+    for (const id of oldIds) {
+      if (!newIds.has(id)) return true;
+    }
+    
+    return false;
+  };
   
   useEffect(() => {
-    if (!threats.length) return;
+    // Only process data if threats actually changed or this is the first render
+    if (!threats.length || (!hasThreatsChanged(previousThreatsRef.current, threats) && dailyData.length > 0)) {
+      return;
+    }
+    
+    // Update the ref with current threats
+    previousThreatsRef.current = [...threats];
     
     // Generate data for daily trends (last 7 days)
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -63,7 +91,7 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
     typeArray.sort((a, b) => b.value - a.value);
     
     setTypeData(typeArray.slice(0, 5)); // Top 5 attack types
-  }, [threats]);
+  }, [threats, dailyData.length]);
   
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

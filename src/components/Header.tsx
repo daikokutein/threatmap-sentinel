@@ -64,7 +64,7 @@ const Header = ({
             })}
           </div>
           
-          <div id="settings-trigger" className="z-20 absolute top-3 right-3 md:static">
+          <div id="settings-trigger" className="relative z-20">
             <SettingsPanel 
               connectionSettings={connectionSettings}
               isConnected={isConnected}

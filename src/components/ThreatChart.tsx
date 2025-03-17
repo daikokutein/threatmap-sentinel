@@ -1,10 +1,10 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { ThreatData } from '@/hooks/useThreatData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUpRight, BarChartIcon } from 'lucide-react';
-import { format, subHours } from 'date-fns';
+import { format, subHours, isEqual } from 'date-fns';
 
 interface ThreatChartProps {
   threats: ThreatData[];
@@ -12,9 +12,42 @@ interface ThreatChartProps {
 
 const ThreatChart = ({ threats }: ThreatChartProps) => {
   const [chartData, setChartData] = useState<any[]>([]);
+  const previousThreatsRef = useRef<ThreatData[]>([]);
+  const initialRenderRef = useRef<boolean>(true);
+  
+  // Function to check if threats data has actually changed in a meaningful way
+  const hasThreatsChanged = (oldThreats: ThreatData[], newThreats: ThreatData[]) => {
+    if (oldThreats.length !== newThreats.length) return true;
+    
+    // Create a set of threat IDs for quick lookup
+    const oldIds = new Set(oldThreats.map(t => t.id));
+    const newIds = new Set(newThreats.map(t => t.id));
+    
+    // Check if any new IDs appeared
+    for (const id of newIds) {
+      if (!oldIds.has(id)) return true;
+    }
+    
+    // Check if any IDs disappeared
+    for (const id of oldIds) {
+      if (!newIds.has(id)) return true;
+    }
+    
+    return false;
+  };
   
   useEffect(() => {
-    if (!threats.length) return;
+    // Skip processing if threats haven't changed and this isn't the first render
+    if (!threats.length || 
+        (!initialRenderRef.current && 
+         !hasThreatsChanged(previousThreatsRef.current, threats) && 
+         chartData.length > 0)) {
+      return;
+    }
+    
+    // Update the ref with current threats
+    previousThreatsRef.current = [...threats];
+    initialRenderRef.current = false;
     
     // Generate time slots for the last 12 hours
     const timeSlots = Array.from({ length: 12 }, (_, i) => {
@@ -46,7 +79,7 @@ const ThreatChart = ({ threats }: ThreatChartProps) => {
     });
     
     setChartData(timeSlots);
-  }, [threats]);
+  }, [threats, chartData.length]);
   
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
