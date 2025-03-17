@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Shield } from 'lucide-react';
-import SettingsPanel from './SettingsPanel';
+import { Shield, Settings } from 'lucide-react';
+import SettingsPanel from './settings/SettingsPanel';
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
@@ -54,6 +54,24 @@ const Header = ({
         <div className="flex items-center">
           <Shield className="h-6 w-6 text-primary mr-2" />
           <h1 className="text-lg font-medium">Sentinel</h1>
+          
+          {/* Settings trigger moved to the left side */}
+          <div id="settings-trigger" className="ml-4">
+            <SettingsPanel 
+              connectionSettings={connectionSettings}
+              isConnected={isConnected}
+              onDisconnect={onDisconnect}
+              onReset={onReset}
+              onConnect={onConnect}
+              soundEnabled={soundEnabled}
+              setSoundEnabled={setSoundEnabled}
+              notificationsEnabled={notificationsEnabled}
+              setNotificationsEnabled={setNotificationsEnabled}
+              soundVolume={soundVolume}
+              setSoundVolume={setSoundVolume}
+              connectionError={connectionError}
+            />
+          </div>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -66,24 +84,6 @@ const Header = ({
             })}
           </div>
         </div>
-      </div>
-      
-      {/* Settings panel moved outside the header for better positioning */}
-      <div id="settings-trigger">
-        <SettingsPanel 
-          connectionSettings={connectionSettings}
-          isConnected={isConnected}
-          onDisconnect={onDisconnect}
-          onReset={onReset}
-          onConnect={onConnect}
-          soundEnabled={soundEnabled}
-          setSoundEnabled={setSoundEnabled}
-          notificationsEnabled={notificationsEnabled}
-          setNotificationsEnabled={setNotificationsEnabled}
-          soundVolume={soundVolume}
-          setSoundVolume={setSoundVolume}
-          connectionError={connectionError}
-        />
       </div>
     </header>
   );
