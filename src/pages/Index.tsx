@@ -14,6 +14,9 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shield, AlertOctagon } from 'lucide-react';
 
+// Create and add alert.mp3 to public folder
+const ALERT_SOUND_URL = '/alert.mp3';
+
 const Index = () => {
   // Load persisted settings from localStorage with error handling
   const [persistedSettings, setPersistedSettings] = useState(() => {
@@ -66,6 +69,7 @@ const Index = () => {
   const [alertHistory, setAlertHistory] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   
   // Safely persist settings to localStorage
   const safelyPersistToStorage = useCallback((key: string, value: any) => {
@@ -92,35 +96,42 @@ const Index = () => {
     safelyPersistToStorage('sentinel-sound-volume', soundVolume.toString());
   }, [soundVolume, safelyPersistToStorage]);
 
-  // Initialize audio with proper error handling
+  // Fix audio loading with better error handling
   useEffect(() => {
     try {
-      audioRef.current = new Audio('/alert.mp3');
-      audioRef.current.preload = 'auto';
+      // Create audio element and set its properties
+      const audio = new Audio(ALERT_SOUND_URL);
+      audio.preload = 'auto';
+      audioRef.current = audio;
       
       const handleAudioLoaded = () => {
+        console.log('Audio loaded successfully');
         setAudioLoaded(true);
+        setAudioError(null);
       };
       
       const handleAudioError = (e: ErrorEvent) => {
         console.error('Error loading audio:', e);
         setAudioLoaded(false);
+        setAudioError('Failed to load alert sound');
       };
       
-      if (audioRef.current) {
-        audioRef.current.addEventListener('canplaythrough', handleAudioLoaded);
-        audioRef.current.addEventListener('error', handleAudioError as EventListener);
-      }
+      audio.addEventListener('canplaythrough', handleAudioLoaded);
+      audio.addEventListener('error', handleAudioError as EventListener);
+      
+      // Try to load the audio file
+      audio.load();
       
       return () => {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.removeEventListener('canplaythrough', handleAudioLoaded);
-          audioRef.current.removeEventListener('error', handleAudioError as EventListener);
+        if (audio) {
+          audio.pause();
+          audio.removeEventListener('canplaythrough', handleAudioLoaded);
+          audio.removeEventListener('error', handleAudioError as EventListener);
         }
       };
     } catch (error) {
       console.error('Error initializing audio:', error);
+      setAudioError('Failed to initialize audio');
       return () => {};
     }
   }, []);
@@ -129,12 +140,14 @@ const Index = () => {
     isConnected,
     isLoading,
     error,
+    connectionError,
     lastUpdated,
     threatData,
     blockchainData,
     threatStats,
     reconnectAttempts,
     isReconnecting,
+    usingFallbackData,
     connectToSources,
     disconnect,
     fetchThreatData,
@@ -149,34 +162,13 @@ const Index = () => {
   useEffect(() => {
     if (persistedSettings.apiUrl && persistedSettings.blockchainUrl && !isConnected && !isLoading && !isReconnecting) {
       try {
+        console.log('Attempting to connect with stored settings');
         connectToSources();
       } catch (error) {
         console.error('Error connecting to sources:', error);
       }
     }
   }, [persistedSettings, isConnected, isLoading, isReconnecting, connectToSources]);
-  
-  // Establish a reliable polling mechanism for data updates
-  useEffect(() => {
-    if (isConnected && !isLoading) {
-      try {
-        const updateData = () => {
-          fetchThreatData().catch(err => console.error('Error fetching threat data:', err));
-          fetchBlockchainData().catch(err => console.error('Error fetching blockchain data:', err));
-        };
-        
-        // Initial fetch
-        updateData();
-        
-        // Regular polling
-        const forcedRefresh = setInterval(updateData, 10000);
-        
-        return () => clearInterval(forcedRefresh);
-      } catch (error) {
-        console.error('Error in update effect:', error);
-      }
-    }
-  }, [isConnected, isLoading, fetchThreatData, fetchBlockchainData]);
   
   // Handle high severity threats for alerts
   useEffect(() => {
@@ -199,7 +191,13 @@ const Index = () => {
           try {
             audioRef.current.volume = soundVolume / 100;
             audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(err => console.error('Error playing audio:', err));
+            audioRef.current.play().catch(err => {
+              console.error('Error playing audio:', err);
+              // Handle autoplay restrictions
+              if (err.name === 'NotAllowedError') {
+                console.warn('Audio playback was blocked by the browser. User interaction required.');
+              }
+            });
           } catch (error) {
             console.error('Error playing alert sound:', error);
           }
@@ -213,15 +211,14 @@ const Index = () => {
   // Safely validate URLs and connect
   const handleConnect = useCallback((apiKey: string, apiUrl: string, blockchainUrl: string) => {
     try {
-      // Basic URL validation
-      new URL(apiUrl);
-      new URL(blockchainUrl);
-      
+      // Store the new settings
       const newSettings = { apiKey, apiUrl, blockchainUrl };
       setPersistedSettings(newSettings);
+      
+      // Try to connect with the new settings
       connectToSources();
     } catch (err) {
-      console.error("Invalid URL format", err);
+      console.error("Error in handleConnect:", err);
     }
   }, [connectToSources]);
   
@@ -251,6 +248,7 @@ const Index = () => {
           setNotificationsEnabled={setNotificationsEnabled}
           soundVolume={soundVolume}
           setSoundVolume={setSoundVolume}
+          connectionError={connectionError}
         />
         
         <main className="container mx-auto pt-24 pb-16 px-4 sm:px-6">
@@ -261,6 +259,7 @@ const Index = () => {
                 lastUpdated={lastUpdated}
                 isReconnecting={isReconnecting}
                 reconnectAttempts={reconnectAttempts} 
+                usingFallbackData={usingFallbackData}
               />
             </div>
           )}
@@ -285,12 +284,18 @@ const Index = () => {
                     Connect to your threat intelligence API and blockchain ledger to view 
                     real-time security insights and threat data.
                   </p>
+                  {connectionError && (
+                    <div className="text-red-500 p-4 bg-red-500/10 rounded-lg text-sm">
+                      <AlertOctagon className="h-4 w-4 inline-block mr-2" />
+                      {connectionError}
+                    </div>
+                  )}
                   <div className="flex justify-center">
                     <button 
                       onClick={() => document.getElementById('settings-trigger')?.click()}
                       className="connect-button group"
                     >
-                      Connect to Data Sources
+                      Configure Connection
                     </button>
                   </div>
                 </div>

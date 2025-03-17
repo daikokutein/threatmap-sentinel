@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -43,6 +44,83 @@ interface useThreatDataProps {
   blockchainUrl?: string;
 }
 
+// Sample data for fallback when API fails
+const FALLBACK_THREATS: ThreatData[] = [
+  {
+    id: "t1",
+    timestamp: new Date().toISOString(),
+    ip: "192.168.1.10",
+    attack_type: "SQL Injection",
+    severity: "High",
+    status: "Active",
+    details: {
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      method: "POST",
+      url_path: "/admin/login",
+      source_port: 49123,
+      destination_port: 443
+    },
+    coordinates: [37.7749, -122.4194]
+  },
+  {
+    id: "t2",
+    timestamp: new Date(Date.now() - 300000).toISOString(),
+    ip: "10.0.0.5",
+    attack_type: "XSS",
+    severity: "Medium",
+    status: "Active",
+    details: {
+      user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      method: "GET",
+      url_path: "/search?q=<script>",
+      source_port: 52234,
+      destination_port: 443
+    },
+    coordinates: [40.7128, -74.0060]
+  },
+  {
+    id: "t3",
+    timestamp: new Date(Date.now() - 600000).toISOString(),
+    ip: "172.16.0.1",
+    attack_type: "Brute Force",
+    severity: "Medium",
+    status: "Mitigated",
+    details: {
+      user_agent: "Python-urllib/3.9",
+      method: "POST",
+      url_path: "/wp-login.php",
+      source_port: 36789,
+      destination_port: 80
+    },
+    coordinates: [51.5074, -0.1278]
+  }
+];
+
+const FALLBACK_BLOCKCHAIN: BlockchainData = {
+  chain: [
+    {
+      data: {
+        message: "Genesis Block",
+        type: "genesis"
+      },
+      data_hash: "42ae1fa77dbaccb1c304a542e662c418556ea433147c38865626dd4e13bcc9be",
+      hash: "29455a0da85c2037d0c6fbfbac5e9552121579d37b16c5c2d5d818087d2f9730",
+      previous_hash: "0",
+      timestamp: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      data: {
+        message: "Security Event Detected",
+        type: "threat"
+      },
+      data_hash: "64865c367b68e37a4b73bf7cfff551799f6b9532afebce80da2ff543b672b306",
+      hash: "4711256be06ce53a633729cb4d17cc520b97b39ab20f761e60737ef395a29e20",
+      previous_hash: "29455a0da85c2037d0c6fbfbac5e9552121579d37b16c5c2d5d818087d2f9730",
+      timestamp: new Date(Date.now() - 3600000).toISOString()
+    }
+  ]
+};
+
 // Cache for IP coordinates to ensure consistency
 const IP_CACHE: Record<string, [number, number]> = {};
 
@@ -66,10 +144,12 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   const [threatData, setThreatData] = useState<ThreatData[]>([]);
   const [blockchainData, setBlockchainData] = useState<BlockchainData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [lastSuccessfulFetch, setLastSuccessfulFetch] = useState<Date | null>(null);
+  const [usingFallbackData, setUsingFallbackData] = useState(false);
   
   const intervalRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
@@ -77,9 +157,10 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   
   // Keep track of seen threat IDs to detect new threats
   const seenThreatIdsRef = useRef<Set<string>>(new Set());
+  const previousThreatDataRef = useRef<ThreatData[]>([]);
   
   const fetchThreatData = useCallback(async () => {
-    if (!apiUrl) return;
+    if (!apiUrl) return { newThreats: [], success: false };
     
     // Cancel any in-progress requests
     if (abortControllerRef.current) {
@@ -95,6 +176,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
       
+      console.log(`Fetching threat data from: ${apiUrl}`);
       const response = await fetch(apiUrl, { 
         headers,
         signal: abortControllerRef.current.signal,
@@ -108,11 +190,26 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       
       const data: ThreatData[] = await response.json();
       
+      // Check if data structure is valid
+      if (!Array.isArray(data)) {
+        console.error("Invalid data format received:", data);
+        throw new Error("Invalid data format received from API");
+      }
+      
       // Add coordinates to each threat for map visualization
       const enrichedData = data.map(threat => ({
         ...threat,
         coordinates: getCoordinatesForIP(threat.ip)
       }));
+      
+      // Check if there are actual changes to avoid unnecessary re-renders
+      const currentDataJson = JSON.stringify(enrichedData);
+      const previousDataJson = JSON.stringify(previousThreatDataRef.current);
+      
+      if (currentDataJson === previousDataJson && previousThreatDataRef.current.length > 0) {
+        // Data hasn't changed, don't update state
+        return { newThreats: [], success: true, unchanged: true };
+      }
       
       // Check for new threats
       const currentThreatIds = new Set(enrichedData.map(t => t.id));
@@ -121,9 +218,13 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       // Update seen threat IDs
       enrichedData.forEach(t => seenThreatIdsRef.current.add(t.id));
       
+      // Store current data for future comparison
+      previousThreatDataRef.current = enrichedData;
+      
       setThreatData(enrichedData);
       setLastUpdated(new Date());
       setLastSuccessfulFetch(new Date());
+      setUsingFallbackData(false);
       
       // Reset reconnect state on successful fetch
       if (isReconnecting) {
@@ -135,6 +236,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       // If we weren't connected before, set connected now
       if (!isConnected) {
         setIsConnected(true);
+        setConnectionError(null);
       }
       
       // Return new threats for notification purposes
@@ -142,11 +244,20 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     } catch (err) {
       // Only set error if it's not an abort error
       if (err instanceof Error && err.name !== 'AbortError') {
+        console.error("Error fetching threat data:", err.message);
         setError(err.message);
         
         if (isConnected && !isReconnecting) {
           setIsReconnecting(true);
           toast.error('Connection to threat API lost. Attempting to reconnect...');
+        }
+        
+        // If no data exists yet, use fallback data
+        if (threatData.length === 0 && !usingFallbackData) {
+          console.log("Using fallback threat data");
+          setThreatData(FALLBACK_THREATS);
+          setUsingFallbackData(true);
+          toast.warning('Using sample threat data for demonstration');
         }
         
         // If it was connected but now it's not, start reconnect process
@@ -158,12 +269,13 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       }
       return { newThreats: [], success: false, aborted: true };
     }
-  }, [apiUrl, apiKey, isConnected, isReconnecting]);
+  }, [apiUrl, apiKey, isConnected, isReconnecting, usingFallbackData, threatData.length]);
   
   const fetchBlockchainData = useCallback(async () => {
-    if (!blockchainUrl) return;
+    if (!blockchainUrl) return { success: false };
     
     try {
+      console.log(`Fetching blockchain data from: ${blockchainUrl}`);
       const response = await fetch(blockchainUrl, {
         // Add cache busting parameter to prevent caching
         cache: 'no-store'
@@ -173,19 +285,35 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
         throw new Error(`Blockchain request failed with status ${response.status}`);
       }
       
-      const data: BlockchainData = await response.json();
+      const data = await response.json();
+      
+      // Validate blockchain data structure
+      if (!data || !data.chain || !Array.isArray(data.chain)) {
+        console.error("Invalid blockchain data format:", data);
+        throw new Error("Invalid blockchain data format");
+      }
+      
       setBlockchainData(data);
       setLastUpdated(new Date());
       setLastSuccessfulFetch(new Date());
+      setUsingFallbackData(false);
       
       return { success: true };
     } catch (err) {
       if (err instanceof Error) {
+        console.error("Error fetching blockchain data:", err.message);
         setError(err.message);
         
         if (isConnected && !isReconnecting) {
           setIsReconnecting(true);
           toast.error('Connection to blockchain lost. Attempting to reconnect...');
+        }
+        
+        // If no blockchain data exists yet, use fallback data
+        if (!blockchainData && !usingFallbackData) {
+          console.log("Using fallback blockchain data");
+          setBlockchainData(FALLBACK_BLOCKCHAIN);
+          setUsingFallbackData(true);
         }
         
         // If it was connected but now it's not, start reconnect process
@@ -197,7 +325,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       }
       return { success: false };
     }
-  }, [blockchainUrl, isConnected, isReconnecting]);
+  }, [blockchainUrl, isConnected, isReconnecting, blockchainData, usingFallbackData]);
   
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -242,6 +370,18 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   const connectToSources = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setConnectionError(null);
+    
+    // Validate URLs before attempting connection
+    try {
+      if (apiUrl) new URL(apiUrl);
+      if (blockchainUrl) new URL(blockchainUrl);
+    } catch (err) {
+      setConnectionError("Invalid URL format. Please check your connection settings.");
+      setIsLoading(false);
+      toast.error('Invalid URL format');
+      return;
+    }
     
     // Clear any existing interval and timeout
     if (intervalRef.current) {
@@ -274,17 +414,43 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
           fetchBlockchainData();
         }, 5000);
       } else {
+        setConnectionError("Failed to connect to one or more data sources. Check network and URLs.");
         toast.error('Failed to connect to one or more data sources');
+        
+        // Use fallback data for demo purposes
+        if (threatData.length === 0) {
+          setThreatData(FALLBACK_THREATS);
+          setUsingFallbackData(true);
+        }
+        
+        if (!blockchainData) {
+          setBlockchainData(FALLBACK_BLOCKCHAIN);
+          setUsingFallbackData(true);
+        }
+        
         setIsConnected(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connection failed');
+      const errorMessage = err instanceof Error ? err.message : 'Connection failed';
+      setConnectionError(errorMessage);
+      setError(errorMessage);
       setIsConnected(false);
       toast.error('Failed to connect to data sources');
+      
+      // Use fallback data
+      if (threatData.length === 0) {
+        setThreatData(FALLBACK_THREATS);
+        setUsingFallbackData(true);
+      }
+      
+      if (!blockchainData) {
+        setBlockchainData(FALLBACK_BLOCKCHAIN);
+        setUsingFallbackData(true);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [fetchThreatData, fetchBlockchainData]);
+  }, [fetchThreatData, fetchBlockchainData, apiUrl, blockchainUrl, threatData.length, blockchainData]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -335,12 +501,14 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     isConnected,
     isLoading,
     error,
+    connectionError,
     lastUpdated,
     threatData,
     blockchainData,
     threatStats,
     reconnectAttempts,
     isReconnecting,
+    usingFallbackData,
     connectToSources,
     disconnect,
     fetchThreatData,
