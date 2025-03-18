@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
 import ThreatStats from '@/features/stats/ThreatStats';
@@ -29,14 +30,16 @@ const Index = () => {
     })
   );
   
-  // Fix the type error - converting string to boolean properly
-  const [soundEnabled, setSoundEnabled] = useState(() => 
-    getFromStorage('sentinel-sound-enabled', 'false') === 'true'
-  );
+  // Fix the type error by correctly handling the string-to-boolean conversion
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const storedValue = getFromStorage('sentinel-sound-enabled', 'false');
+    return storedValue === 'true';
+  });
   
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => 
-    getFromStorage('sentinel-notifications-enabled', 'true') === 'true'
-  );
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    const storedValue = getFromStorage('sentinel-notifications-enabled', 'true');
+    return storedValue === 'true';
+  });
   
   const [soundVolume, setSoundVolume] = useState(() => {
     const volume = getFromStorage('sentinel-sound-volume', '70');
