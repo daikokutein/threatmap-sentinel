@@ -1,68 +1,69 @@
+# Welcome to your Lovable project
 
-# Sentinel - Cybersecurity Monitoring Dashboard
+## Project info
 
-Sentinel is a real-time cybersecurity monitoring dashboard that provides visualization and tracking of security threats and blockchain-verified security events.
+**URL**: https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0
 
-## Features
+## How can I edit this code?
 
-- **Real-time Threat Monitoring**: View and track security threats as they occur
-- **Blockchain Verification**: Immutable record of security events stored on blockchain
-- **Interactive Visualization**: Maps, charts, and statistics for better threat analysis
-- **Customizable Settings**: Configure connections, notifications, and display preferences
-- **Graceful Degradation**: Continues to function with partial connectivity or fallback data
+There are several ways of editing your application.
 
-## Components
+**Use Lovable**
 
-The application is organized into feature-based modules:
+Simply visit the [Lovable Project](https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0) and start prompting.
 
-- **Alerts**: Real-time notification system for high-severity threats
-- **Blockchain**: Immutable ledger of security events with blockchain verification
-- **Charts**: Visual representation of threat data and trends
-- **Feeds**: Live attack monitoring and event feeds
-- **Maps**: Geographic visualization of attack origins
-- **Settings**: Connection configuration and application preferences
-- **Stats**: Summary statistics of security events and threats
+Changes made via Lovable will be committed automatically to this repo.
 
-## Connection Settings
+**Use your preferred IDE**
 
-The dashboard connects to two primary data sources:
-1. **Threat API**: Provides real-time security event data
-2. **Blockchain API**: Stores immutable records of security events
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-You can configure these connections in the settings panel. The system provides detailed connection status information, including:
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-- Which specific API endpoint is experiencing connectivity issues
-- Connection attempts and status
-- When data was last updated
-- Whether fallback demo data is being used
+Follow these steps:
 
-## Error Handling
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-Sentinel includes robust error handling to ensure the application continues functioning even when connectivity issues occur:
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-- Clearly indicates which specific API (Threat or Blockchain) is experiencing connectivity issues
-- Automatically attempts to reconnect with exponential backoff
-- Uses fallback/demo data when real connections fail
-- Provides detailed error messages to help diagnose connection problems
+# Step 3: Install the necessary dependencies.
+npm i
 
-## Getting Started
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
 
-1. Open the application in your browser
-2. Click the settings icon in the top-left corner
-3. Configure your connection settings with your API endpoints
-4. Connect to begin monitoring security threats in real-time
+**Edit a file directly in GitHub**
 
-## Usage Tips
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-- Enable sound notifications for high-severity threats
-- Use the blockchain ledger to verify the authenticity of security events
-- Monitor trends over time using the threat charts and statistics
-- Check geographic attack patterns on the threat map
+**Use GitHub Codespaces**
 
-## Troubleshooting
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-If you experience connection issues:
-- Check your network connectivity
-- Verify API endpoint URLs are correct
-- Look at the connection status panel for specific error information
-- The dashboard will continue to function with partial connectivity (only one API connected)
+## What technologies are used for this project?
+
+This project is built with .
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0) and click on Share -> Publish.
+
+## I want to use a custom domain - is that possible?
+
+We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
