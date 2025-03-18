@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
 import ThreatStats from '@/features/stats/ThreatStats';
@@ -30,6 +29,7 @@ const Index = () => {
     })
   );
   
+  // Fix the type error - converting string to boolean properly
   const [soundEnabled, setSoundEnabled] = useState(() => 
     getFromStorage('sentinel-sound-enabled', 'false') === 'true'
   );
