@@ -1,69 +1,118 @@
-# Welcome to your Lovable project
 
-## Project info
+# Sentinel Cybersecurity Dashboard
 
-**URL**: https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0
+## Overview
 
-## How can I edit this code?
+Sentinel is a real-time cybersecurity monitoring dashboard that provides visibility into network threats, attacks, and security incidents. The dashboard connects to security APIs and leverages blockchain technology for immutable record-keeping of security events.
 
-There are several ways of editing your application.
+![Sentinel Dashboard](public/og-image.png)
 
-**Use Lovable**
+## Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0) and start prompting.
+### Real-time Threat Monitoring
+- Live attack feed with filtering options
+- Severity-based threat categorization (High, Medium, Low)
+- Geographic visualization of attack sources
+- Automatic alerts for critical security events
 
-Changes made via Lovable will be committed automatically to this repo.
+### Blockchain Security Ledger
+- Immutable record of security incidents
+- Cryptographically verified security event chain
+- Historical view of all recorded security incidents
+- Detailed block information with expandable views
 
-**Use your preferred IDE**
+### Analytics & Reporting
+- Threat statistics and metrics
+- Attack trend analysis over time
+- Attack type distribution charts
+- Severity breakdown visualizations
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### System Integration
+- Connects to external threat intelligence APIs
+- Blockchain connectivity for verification
+- Customizable connection settings
+- Fallback to sample data when APIs are unavailable
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Technical Details
 
-Follow these steps:
+### Architecture
+The application is built with a modern React architecture using TypeScript for type safety. It employs a feature-based folder structure for better organization and maintainability. The UI is built with shadcn/ui components and Tailwind CSS for styling.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Key Components
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Threat Monitoring**: Real-time data visualization of security threats
+- **Blockchain Ledger**: Immutable record-keeping of security events
+- **Error Handling**: Graceful degradation with fallback data
+- **Connection Status**: Clear indicators of system connectivity
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Data Sources
+The dashboard connects to two primary data sources:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. **Threat Intelligence API**: Provides real-time security threat data
+2. **Blockchain API**: Provides immutable verification of security events
+
+Both connections are configurable through the settings panel, and the system will automatically attempt to reconnect if connections are lost.
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
+
+### Installation
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+
+### Configuration
+To connect to your data sources:
+
+1. Click the settings icon in the header
+2. Enter your API key (if required)
+3. Enter your Threat API URL
+4. Enter your Blockchain URL
+5. Click Connect
+
+### Development
+The project uses Vite for fast development and building. Key commands:
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+
+## Project Structure
+
+```
+src/
+├── components/      # Generic UI components
+├── features/        # Feature-specific components
+│   ├── blockchain/  # Blockchain viewer components
+│   ├── feeds/       # Live attack feed components
+│   ├── settings/    # Settings and configuration components
+│   └── stats/       # Statistics and metrics components
+├── hooks/           # Custom React hooks
+├── lib/             # Utility libraries
+├── pages/           # Application pages
+└── utils/           # Utility functions
 ```
 
-**Edit a file directly in GitHub**
+## Error Handling
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The application is designed to handle various error conditions gracefully:
 
-**Use GitHub Codespaces**
+- **Connection failures**: Falls back to sample data
+- **API timeout**: Automatically attempts to reconnect
+- **Data format errors**: Provides meaningful error messages
+- **Partial connectivity**: Functions with limited data sources
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Security Features
 
-## What technologies are used for this project?
+- Secure connection settings
+- Real-time threat alerts
+- High severity notifications
+- Connection status monitoring
+- Immutable security records
 
-This project is built with .
+## License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+This project is licensed under the MIT License - see the LICENSE file for details.
