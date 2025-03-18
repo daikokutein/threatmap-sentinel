@@ -285,13 +285,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
         throw new Error(`Blockchain request failed with status ${response.status}`);
       }
       
-      let data;
-      try {
-        data = await response.json();
-      } catch (e) {
-        console.error("Error parsing blockchain response as JSON:", e);
-        throw new Error("Invalid JSON response from blockchain API");
-      }
+      const data = await response.json();
       
       // Validate blockchain data structure
       if (!data || !data.chain || !Array.isArray(data.chain)) {
