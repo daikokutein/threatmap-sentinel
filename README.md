@@ -1,118 +1,83 @@
 
-# Sentinel Cybersecurity Dashboard
+# Sentinel Security Dashboard
 
-## Overview
-
-Sentinel is a real-time cybersecurity monitoring dashboard that provides visibility into network threats, attacks, and security incidents. The dashboard connects to security APIs and leverages blockchain technology for immutable record-keeping of security events.
-
-![Sentinel Dashboard](public/og-image.png)
+This web application provides a comprehensive cybersecurity monitoring dashboard that displays real-time threat intelligence data and blockchain security ledger information. The dashboard is designed to help security professionals monitor and respond to cyber threats efficiently.
 
 ## Features
 
-### Real-time Threat Monitoring
-- Live attack feed with filtering options
-- Severity-based threat categorization (High, Medium, Low)
-- Geographic visualization of attack sources
-- Automatic alerts for critical security events
+- **Real-time Threat Monitoring**: View active threats as they occur
+- **Blockchain Security Ledger**: Monitor blockchain-based security records
+- **Threat Statistics**: View aggregated threat statistics by severity
+- **Interactive Threat Map**: Visualize threat origins geographically
+- **Attack Timeline**: Track threat patterns over time
+- **High-severity Alerts**: Get immediate notifications for critical threats
+- **Sound Alerts**: Optional audio notifications for critical events
+- **Dark/Light Mode**: UI theme options for different environments
 
-### Blockchain Security Ledger
-- Immutable record of security incidents
-- Cryptographically verified security event chain
-- Historical view of all recorded security incidents
-- Detailed block information with expandable views
+## Dashboard Components
 
-### Analytics & Reporting
-- Threat statistics and metrics
-- Attack trend analysis over time
-- Attack type distribution charts
-- Severity breakdown visualizations
+1. **Connection Status Panel**: Shows connection status to both the Threat API and Blockchain API
+2. **Threat Statistics**: Summary of total threats categorized by severity level
+3. **Live Attack Feed**: Real-time feed of incoming threats
+4. **Threat Chart**: Visualization of threat patterns over time
+5. **Threat Map**: Geographic visualization of attack origins
+6. **Blockchain Viewer**: View of the blockchain security ledger
+7. **Threat Trends**: Analysis of threat patterns and trends
 
-### System Integration
-- Connects to external threat intelligence APIs
-- Blockchain connectivity for verification
-- Customizable connection settings
-- Fallback to sample data when APIs are unavailable
+## Setup and Configuration
 
-## Technical Details
+The dashboard connects to two main data sources:
+- **Threat Intelligence API**: Provides real-time threat data
+- **Blockchain Ledger API**: Provides blockchain-based security records
 
-### Architecture
-The application is built with a modern React architecture using TypeScript for type safety. It employs a feature-based folder structure for better organization and maintainability. The UI is built with shadcn/ui components and Tailwind CSS for styling.
-
-### Key Components
-
-- **Threat Monitoring**: Real-time data visualization of security threats
-- **Blockchain Ledger**: Immutable record-keeping of security events
-- **Error Handling**: Graceful degradation with fallback data
-- **Connection Status**: Clear indicators of system connectivity
-
-### Data Sources
-The dashboard connects to two primary data sources:
-
-1. **Threat Intelligence API**: Provides real-time security threat data
-2. **Blockchain API**: Provides immutable verification of security events
-
-Both connections are configurable through the settings panel, and the system will automatically attempt to reconnect if connections are lost.
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
-
-### Installation
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Start the development server: `npm run dev`
-
-### Configuration
-To connect to your data sources:
-
-1. Click the settings icon in the header
-2. Enter your API key (if required)
-3. Enter your Threat API URL
-4. Enter your Blockchain URL
-5. Click Connect
-
-### Development
-The project uses Vite for fast development and building. Key commands:
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-
-## Project Structure
-
-```
-src/
-├── components/      # Generic UI components
-├── features/        # Feature-specific components
-│   ├── blockchain/  # Blockchain viewer components
-│   ├── feeds/       # Live attack feed components
-│   ├── settings/    # Settings and configuration components
-│   └── stats/       # Statistics and metrics components
-├── hooks/           # Custom React hooks
-├── lib/             # Utility libraries
-├── pages/           # Application pages
-└── utils/           # Utility functions
-```
+To configure the dashboard:
+1. Click the Settings icon in the top left
+2. Enter your API endpoints in the Connection Settings tab
+3. Optionally configure notification settings in the General tab
+4. Click Connect to establish connections to the data sources
 
 ## Error Handling
 
-The application is designed to handle various error conditions gracefully:
+The dashboard implements robust error handling to ensure usability even when connections fail:
+- Connection Status indicators show which API (Threat or Blockchain) is disconnected
+- Detailed error messages are displayed when connection attempts fail
+- The application continues to function with partial data if only one API is available
+- Reconnection attempts are automatically made when connections are lost
 
-- **Connection failures**: Falls back to sample data
-- **API timeout**: Automatically attempts to reconnect
-- **Data format errors**: Provides meaningful error messages
-- **Partial connectivity**: Functions with limited data sources
+## Project Structure
 
-## Security Features
+The project is organized into feature-based folders for better maintainability:
 
-- Secure connection settings
-- Real-time threat alerts
-- High severity notifications
-- Connection status monitoring
-- Immutable security records
+- **/features**: Core functionality organized by feature
+  - **/blockchain**: Blockchain ledger components
+  - **/feeds**: Real-time data feed components
+  - **/settings**: Configuration and settings components
+  - **/stats**: Statistical visualization components
+- **/components**: Reusable UI components
+  - **/ui**: Shadcn UI component library
+  - **/charts**: Data visualization components
+  - **/maps**: Geographic visualization components
+  - **/alerts**: Notification components
+- **/hooks**: React hooks for data fetching and state management
+- **/utils**: Utility functions for data processing and other operations
+- **/pages**: Application pages and routes
 
-## License
+## Technologies Used
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- React for the user interface
+- Tailwind CSS for styling
+- Shadcn UI for component library
+- Recharts for data visualization
+- Lucide React for icons
+- Tanstack Query for data fetching
+- date-fns for date formatting
+
+## Best Practices
+
+This project follows modern React best practices:
+- Component-based architecture
+- Custom hooks for logic separation
+- Responsive design for all screen sizes
+- Graceful error handling
+- Persistent user settings
+- Accessibility considerations
