@@ -1,14 +1,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
-import ThreatStats from '@/features/stats/ThreatStats';
-import LiveAttackFeed from '@/features/feeds/LiveAttackFeed';
+import ThreatStats from '@/components/stats/ThreatStats';
+import LiveAttackFeed from '@/components/feeds/LiveAttackFeed';
 import ThreatMap from '@/components/maps/ThreatMap';
-import BlockchainViewer from '@/features/blockchain/BlockchainViewer';
+import BlockchainViewer from '@/components/blockchain/BlockchainViewer';
 import ThreatChart from '@/components/charts/ThreatChart';
 import AlertBanner from '@/components/alerts/AlertBanner';
 import ThreatTrends from '@/components/charts/ThreatTrends';
-import ConnectionStatus from '@/features/settings/ConnectionStatus';
+import ConnectionStatus from '@/components/settings/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -30,16 +30,13 @@ const Index = () => {
     })
   );
   
-  // Fix the type error by correctly handling the string-to-boolean conversion
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    const storedValue = getFromStorage('sentinel-sound-enabled', 'false');
-    return storedValue === 'true';
-  });
+  const [soundEnabled, setSoundEnabled] = useState(() => 
+    getFromStorage('sentinel-sound-enabled', 'false') === 'true'
+  );
   
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    const storedValue = getFromStorage('sentinel-notifications-enabled', 'true');
-    return storedValue === 'true';
-  });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => 
+    getFromStorage('sentinel-notifications-enabled', 'true') !== 'false'
+  );
   
   const [soundVolume, setSoundVolume] = useState(() => {
     const volume = getFromStorage('sentinel-sound-volume', '70');
@@ -124,8 +121,6 @@ const Index = () => {
     reconnectAttempts,
     isReconnecting,
     usingFallbackData,
-    apiConnected,
-    blockchainConnected,
     connectToSources,
     disconnect,
     fetchThreatData,
@@ -223,8 +218,6 @@ const Index = () => {
                 isReconnecting={isReconnecting}
                 reconnectAttempts={reconnectAttempts} 
                 usingFallbackData={usingFallbackData}
-                apiConnected={apiConnected}
-                blockchainConnected={blockchainConnected}
               />
             </div>
           )}
@@ -286,7 +279,7 @@ const Index = () => {
                   <div className="md:col-span-8 h-[400px]">
                     <ThreatMap threats={threatData} />
                   </div>
-                  <div className="md:col-span-4 h-[400px]">
+                  <div className="md:col-span-4">
                     <BlockchainViewer data={blockchainData} />
                   </div>
                 </section>

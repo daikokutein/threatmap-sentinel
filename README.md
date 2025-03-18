@@ -1,83 +1,69 @@
+# Welcome to your Lovable project
 
-# Sentinel Security Dashboard
+## Project info
 
-This web application provides a comprehensive cybersecurity monitoring dashboard that displays real-time threat intelligence data and blockchain security ledger information. The dashboard is designed to help security professionals monitor and respond to cyber threats efficiently.
+**URL**: https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0
 
-## Features
+## How can I edit this code?
 
-- **Real-time Threat Monitoring**: View active threats as they occur
-- **Blockchain Security Ledger**: Monitor blockchain-based security records
-- **Threat Statistics**: View aggregated threat statistics by severity
-- **Interactive Threat Map**: Visualize threat origins geographically
-- **Attack Timeline**: Track threat patterns over time
-- **High-severity Alerts**: Get immediate notifications for critical threats
-- **Sound Alerts**: Optional audio notifications for critical events
-- **Dark/Light Mode**: UI theme options for different environments
+There are several ways of editing your application.
 
-## Dashboard Components
+**Use Lovable**
 
-1. **Connection Status Panel**: Shows connection status to both the Threat API and Blockchain API
-2. **Threat Statistics**: Summary of total threats categorized by severity level
-3. **Live Attack Feed**: Real-time feed of incoming threats
-4. **Threat Chart**: Visualization of threat patterns over time
-5. **Threat Map**: Geographic visualization of attack origins
-6. **Blockchain Viewer**: View of the blockchain security ledger
-7. **Threat Trends**: Analysis of threat patterns and trends
+Simply visit the [Lovable Project](https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0) and start prompting.
 
-## Setup and Configuration
+Changes made via Lovable will be committed automatically to this repo.
 
-The dashboard connects to two main data sources:
-- **Threat Intelligence API**: Provides real-time threat data
-- **Blockchain Ledger API**: Provides blockchain-based security records
+**Use your preferred IDE**
 
-To configure the dashboard:
-1. Click the Settings icon in the top left
-2. Enter your API endpoints in the Connection Settings tab
-3. Optionally configure notification settings in the General tab
-4. Click Connect to establish connections to the data sources
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-## Error Handling
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-The dashboard implements robust error handling to ensure usability even when connections fail:
-- Connection Status indicators show which API (Threat or Blockchain) is disconnected
-- Detailed error messages are displayed when connection attempts fail
-- The application continues to function with partial data if only one API is available
-- Reconnection attempts are automatically made when connections are lost
+Follow these steps:
 
-## Project Structure
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-The project is organized into feature-based folders for better maintainability:
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-- **/features**: Core functionality organized by feature
-  - **/blockchain**: Blockchain ledger components
-  - **/feeds**: Real-time data feed components
-  - **/settings**: Configuration and settings components
-  - **/stats**: Statistical visualization components
-- **/components**: Reusable UI components
-  - **/ui**: Shadcn UI component library
-  - **/charts**: Data visualization components
-  - **/maps**: Geographic visualization components
-  - **/alerts**: Notification components
-- **/hooks**: React hooks for data fetching and state management
-- **/utils**: Utility functions for data processing and other operations
-- **/pages**: Application pages and routes
+# Step 3: Install the necessary dependencies.
+npm i
 
-## Technologies Used
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
 
-- React for the user interface
-- Tailwind CSS for styling
-- Shadcn UI for component library
-- Recharts for data visualization
-- Lucide React for icons
-- Tanstack Query for data fetching
-- date-fns for date formatting
+**Edit a file directly in GitHub**
 
-## Best Practices
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-This project follows modern React best practices:
-- Component-based architecture
-- Custom hooks for logic separation
-- Responsive design for all screen sizes
-- Graceful error handling
-- Persistent user settings
-- Accessibility considerations
+**Use GitHub Codespaces**
+
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
+This project is built with .
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/1579b037-fa5e-458b-9a70-9e18a7d2d6f0) and click on Share -> Publish.
+
+## I want to use a custom domain - is that possible?
+
+We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
