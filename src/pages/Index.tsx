@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
 import ThreatStats from '@/features/stats/ThreatStats';
@@ -16,11 +15,13 @@ import { Shield, AlertOctagon } from 'lucide-react';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { playAudio, initializeAudio } from '@/utils/audioUtils';
 import { getNewHighSeverityThreats } from '@/utils/dataUtils';
+import { useNavigate } from 'react-router-dom';
 
 // Create and add alert.mp3 to public folder
 const ALERT_SOUND_URL = '/alert.mp3';
 
 const Index = () => {
+  const navigate = useNavigate();
   // Load persisted settings from localStorage with error handling
   const [persistedSettings, setPersistedSettings] = useState(() => 
     getFromStorage('sentinel-connection-settings', {
@@ -30,16 +31,14 @@ const Index = () => {
     })
   );
   
-  // Fix the type error by correctly handling the string-to-boolean conversion
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    const storedValue = getFromStorage('sentinel-sound-enabled', 'false');
-    return storedValue === 'true';
-  });
+  // Fix the type error - converting string to boolean properly
+  const [soundEnabled, setSoundEnabled] = useState(() => 
+    getFromStorage('sentinel-sound-enabled', 'false') === 'true'
+  );
   
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    const storedValue = getFromStorage('sentinel-notifications-enabled', 'true');
-    return storedValue === 'true';
-  });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => 
+    getFromStorage('sentinel-notifications-enabled', 'true') === 'true'
+  );
   
   const [soundVolume, setSoundVolume] = useState(() => {
     const volume = getFromStorage('sentinel-sound-volume', '70');
@@ -267,32 +266,79 @@ const Index = () => {
               </div>
             ) : (
               <>
-                <section className="dashboard-grid">
-                  <div className="md:col-span-12">
+                <section className="grid gap-6 mb-6">
+                  <div className="w-full">
                     <ThreatStats {...threatStats} />
                   </div>
                 </section>
                 
-                <section className="dashboard-grid mt-6">
-                  <div className="md:col-span-5 h-[500px]">
-                    <LiveAttackFeed threats={threatData} />
+                <section className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
+                  <div className="md:col-span-5 h-auto">
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="flex flex-col h-full max-h-[500px]">
+                        <div className="p-4 border-b border-border/50">
+                          <h2 className="text-lg font-medium">Live Attack Feed</h2>
+                        </div>
+                        <div className="flex-grow overflow-auto p-0">
+                          <LiveAttackFeed threats={threatData} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className="md:col-span-7 h-[500px]">
-                    <ThreatChart threats={threatData} />
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="p-4 border-b border-border/50">
+                        <h2 className="text-lg font-medium">Threat Analysis</h2>
+                      </div>
+                      <div className="p-4 h-[calc(100%-61px)]">
+                        <ThreatChart threats={threatData} />
+                      </div>
+                    </div>
                   </div>
                 </section>
                 
-                <section className="dashboard-grid mt-6">
+                <section className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
                   <div className="md:col-span-8 h-[400px]">
-                    <ThreatMap threats={threatData} />
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="p-4 border-b border-border/50">
+                        <h2 className="text-lg font-medium">Global Threat Map</h2>
+                      </div>
+                      <div className="h-[calc(100%-61px)]">
+                        <ThreatMap threats={threatData} />
+                      </div>
+                    </div>
                   </div>
                   <div className="md:col-span-4 h-[400px]">
-                    <BlockchainViewer data={blockchainData} />
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="p-4 border-b border-border/50">
+                        <h2 className="text-lg font-medium">Blockchain Ledger</h2>
+                      </div>
+                      <div className="h-[calc(100%-61px)] overflow-auto">
+                        <BlockchainViewer data={blockchainData} />
+                        {blockchainData && blockchainData.chain.length > 0 && (
+                          <div className="flex justify-center mt-4 pb-4">
+                            <button 
+                              onClick={() => navigate('/blockchain-analytics')}
+                              className="text-sm bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-md transition-colors"
+                            >
+                              View Advanced Analytics
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </section>
 
-                <section className="mt-6">
-                  <ThreatTrends threats={threatData} />
+                <section className="mb-6">
+                  <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md">
+                    <div className="p-4 border-b border-border/50">
+                      <h2 className="text-lg font-medium">Threat Trends</h2>
+                    </div>
+                    <div className="p-4">
+                      <ThreatTrends threats={threatData} />
+                    </div>
+                  </div>
                 </section>
               </>
             )}
